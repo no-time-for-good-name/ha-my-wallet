@@ -6,5 +6,5 @@
   "documentation": "https://github.com/no-time-for-good-name/ha-my-wallet",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/no-time-for-good-name/ha-my-wallet/issues",
-  "version": "1.0.1"
+  "version": "1.0.2"
 }

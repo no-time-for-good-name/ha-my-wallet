@@ -1,0 +1,100 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Utwórz portfel",
+        "description": "Skonfiguruj portfel z walorami rynkowymi wycenianymi przez Yahoo Finance.",
+        "data": {
+          "wallet_name": "Nazwa portfela",
+          "base_currency": "Waluta bazowa (total portfela prezentowany w tej walucie)",
+          "scan_interval": "Częstotliwość aktualizacji (minuty)"
+        }
+      },
+      "valor": {
+        "title": "Dodaj walor",
+        "description": "Dodaj walor rynkowy do tego portfela. Używaj symboli Yahoo Finance, np. AAPL, VWAGY, BTC-USD lub ETF-y jak VWCE.DE.",
+        "data": {
+          "symbol": "Symbol (Yahoo Finance)",
+          "amount": "Ilość (liczba jednostek)",
+          "add_another": "Po tym walorze dodaj kolejny"
+        }
+      }
+    },
+    "error": {
+      "invalid_name": "Podaj nazwę portfela.",
+      "invalid_symbol": "Podaj poprawny symbol Yahoo Finance.",
+      "symbol_exists": "Ten symbol znajduje się już w portfelu."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Zarządzaj portfelem",
+        "menu_options": {
+          "settings": "Ustawienia portfela (nazwa, waluta, częstotliwość)",
+          "add_valor": "Dodaj walor",
+          "remove_valor": "Usuń walor",
+          "edit_valor": "Zmień ilość waloru"
+        }
+      },
+      "settings": {
+        "title": "Ustawienia portfela",
+        "data": {
+          "wallet_name": "Nazwa portfela",
+          "base_currency": "Waluta bazowa",
+          "scan_interval": "Częstotliwość aktualizacji (minuty)"
+        }
+      },
+      "add_valor": {
+        "title": "Dodaj walor",
+        "data": {
+          "symbol": "Symbol (Yahoo Finance)",
+          "amount": "Ilość (liczba jednostek)"
+        }
+      },
+      "remove_valor": {
+        "title": "Usuń walor",
+        "data": {
+          "symbol": "Walor do usunięcia"
+        }
+      },
+      "edit_valor": {
+        "title": "Zmiana ilości",
+        "data": {
+          "symbol": "Walor"
+        }
+      },
+      "edit_valor_amount": {
+        "title": "Zmiana ilości",
+        "description": "Walor: {symbol}",
+        "data": {
+          "amount": "Nowa ilość (liczba jednostek)"
+        }
+      }
+    },
+    "error": {
+      "invalid_name": "Podaj nazwę portfela.",
+      "invalid_symbol": "Podaj poprawny symbol Yahoo Finance.",
+      "symbol_exists": "Ten symbol znajduje się już w portfelu."
+    },
+    "abort": {
+      "no_valors": "Portfel nie ma jeszcze żadnych walorów."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "valor": {
+        "name": "{symbol}"
+      },
+      "wallet_total": {
+        "name": "Total"
+      }
+    }
+  },
+  "services": {
+    "refresh": {
+      "name": "Odśwież portfel",
+      "description": "Wymuś natychmiastową aktualizację cen wybranych portfeli."
+    }
+  }
+}

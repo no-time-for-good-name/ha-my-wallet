@@ -18,7 +18,16 @@
           "amount": "Amount (units held)",
           "add_another": "Add another valor after this one"
         }
-      },
+      }
+    },
+    "error": {
+      "invalid_name": "Please enter a wallet name.",
+      "invalid_symbol": "Please enter a valid Yahoo Finance symbol.",
+      "symbol_exists": "This symbol is already in the wallet."
+    }
+  },
+  "options": {
+    "step": {
       "init": {
         "title": "Manage wallet",
         "menu_options": {
