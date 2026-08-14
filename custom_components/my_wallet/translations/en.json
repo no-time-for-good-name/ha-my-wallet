@@ -1,0 +1,91 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Create a wallet",
+        "description": "Configure a wallet with market valors valued via Yahoo Finance.",
+        "data": {
+          "wallet_name": "Wallet name",
+          "base_currency": "Base currency (wallet total is shown in this currency)",
+          "scan_interval": "Update interval (minutes)"
+        }
+      },
+      "valor": {
+        "title": "Add a valor",
+        "description": "Add a market valor to this wallet. Use Yahoo Finance symbols, e.g. AAPL, VWAGY, BTC-USD, or an ETF like VWCE.DE.",
+        "data": {
+          "symbol": "Symbol (Yahoo Finance)",
+          "amount": "Amount (units held)",
+          "add_another": "Add another valor after this one"
+        }
+      },
+      "init": {
+        "title": "Manage wallet",
+        "menu_options": {
+          "settings": "Edit wallet settings (name, currency, interval)",
+          "add_valor": "Add a valor",
+          "remove_valor": "Remove a valor",
+          "edit_valor": "Change a valor's amount"
+        }
+      },
+      "settings": {
+        "title": "Wallet settings",
+        "data": {
+          "wallet_name": "Wallet name",
+          "base_currency": "Base currency",
+          "scan_interval": "Update interval (minutes)"
+        }
+      },
+      "add_valor": {
+        "title": "Add a valor",
+        "data": {
+          "symbol": "Symbol (Yahoo Finance)",
+          "amount": "Amount (units held)"
+        }
+      },
+      "remove_valor": {
+        "title": "Remove a valor",
+        "data": {
+          "symbol": "Valor to remove"
+        }
+      },
+      "edit_valor": {
+        "title": "Change amount",
+        "data": {
+          "symbol": "Valor"
+        }
+      },
+      "edit_valor_amount": {
+        "title": "Change amount",
+        "description": "Valor: {symbol}",
+        "data": {
+          "amount": "New amount (units held)"
+        }
+      }
+    },
+    "error": {
+      "invalid_name": "Please enter a wallet name.",
+      "invalid_symbol": "Please enter a valid Yahoo Finance symbol.",
+      "symbol_exists": "This symbol is already in the wallet."
+    },
+    "abort": {
+      "no_valors": "The wallet has no valors yet."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "valor": {
+        "name": "{symbol}"
+      },
+      "wallet_total": {
+        "name": "Total"
+      }
+    }
+  },
+  "services": {
+    "refresh": {
+      "name": "Refresh wallet",
+      "description": "Force an immediate price update for the selected wallet(s)."
+    }
+  }
+}

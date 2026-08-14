@@ -1,0 +1,9 @@
+refresh:
+  name: Refresh wallet
+  description: >-
+    Force an immediate price update for the selected wallet(s),
+    without waiting for the configured update interval.
+  target:
+    entity:
+      integration: my_wallet
+      domain: sensor

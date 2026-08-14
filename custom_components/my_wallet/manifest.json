@@ -1,0 +1,10 @@
+{
+  "domain": "my_wallet",
+  "name": "My Wallet",
+  "codeowners": ["@prusi"],
+  "config_flow": true,
+  "documentation": "https://github.com/prusi/ha-my-wallet",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/prusi/ha-my-wallet/issues",
+  "version": "1.0.0"
+}
