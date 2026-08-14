@@ -1,10 +1,10 @@
 {
   "domain": "my_wallet",
   "name": "My Wallet",
-  "codeowners": ["@prusi"],
+  "codeowners": ["@no-time-for-good-name"],
   "config_flow": true,
-  "documentation": "https://github.com/prusi/ha-my-wallet",
+  "documentation": "https://github.com/no-time-for-good-name/ha-my-wallet",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/prusi/ha-my-wallet/issues",
+  "issue_tracker": "https://github.com/no-time-for-good-name/ha-my-wallet/issues",
   "version": "1.0.1"
 }
