@@ -1,5 +1,7 @@
 # My Wallet for Home Assistant
 
+[![Validate](https://github.com/no-time-for-good-name/ha-my-wallet/actions/workflows/validate.yml/badge.svg)](https://github.com/no-time-for-good-name/ha-my-wallet/actions/workflows/validate.yml)
+
 A [HACS](https://hacs.xyz) custom integration that tracks investment wallets in
 Home Assistant. Each wallet is a config entry that holds a list of **valors**
 (market instruments) with configurable amounts, valued live via
