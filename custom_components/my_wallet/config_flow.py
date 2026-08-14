@@ -36,7 +36,7 @@ _AMOUNT_SELECTOR = selector.NumberSelector(
     selector.NumberSelectorConfig(
         min=0,
         max=10_000_000_000,
-        step=0.00000001,
+        step=0.01,
         mode=selector.NumberSelectorMode.BOX,
     )
 )
