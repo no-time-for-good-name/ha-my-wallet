@@ -7,7 +7,8 @@
         "data": {
           "wallet_name": "Wallet name",
           "base_currency": "Base currency (wallet total is shown in this currency)",
-          "scan_interval": "Update interval (minutes)"
+          "scan_interval": "Update interval (minutes)",
+          "invested_amount": "Invested amount (optional, in the base currency; enables profit tracking)"
         }
       },
       "valor": {
@@ -31,7 +32,7 @@
       "init": {
         "title": "Manage wallet",
         "menu_options": {
-          "settings": "Edit wallet settings (name, currency, interval)",
+          "settings": "Edit wallet settings (name, currency, interval, invested amount)",
           "add_valor": "Add a valor",
           "remove_valor": "Remove a valor",
           "edit_valor": "Change a valor's amount"
@@ -42,7 +43,8 @@
         "data": {
           "wallet_name": "Wallet name",
           "base_currency": "Base currency",
-          "scan_interval": "Update interval (minutes)"
+          "scan_interval": "Update interval (minutes)",
+          "invested_amount": "Invested amount (optional, in the base currency; set empty to disable profit tracking)"
         }
       },
       "add_valor": {
@@ -88,6 +90,15 @@
       },
       "wallet_total": {
         "name": "Total"
+      },
+      "wallet_invested": {
+        "name": "Invested"
+      },
+      "wallet_profit": {
+        "name": "Profit"
+      },
+      "wallet_profit_pct": {
+        "name": "Profit %"
       }
     }
   },

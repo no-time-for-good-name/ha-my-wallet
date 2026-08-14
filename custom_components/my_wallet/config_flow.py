@@ -13,6 +13,7 @@ from homeassistant.helpers import selector
 from .const import (
     COMMON_CURRENCIES,
     CONF_BASE_CURRENCY,
+    CONF_INVESTED_AMOUNT,
     CONF_SCAN_INTERVAL,
     CONF_VALORS,
     CONF_WALLET_NAME,
@@ -61,16 +62,26 @@ def _valor_schema(symbol: str | None = None, amount: float | None = None) -> vol
     )
 
 
+def _normalize_invested(value: Any) -> float | None:
+    """Return a positive invested amount or None when tracking is disabled."""
+    if value is None:
+        return None
+    invested = float(value)
+    return invested if invested > 0 else None
+
+
 def _settings_schema(
     name: str | None = None,
     currency: str = DEFAULT_BASE_CURRENCY,
     interval: int = DEFAULT_SCAN_INTERVAL,
+    invested: float | None = None,
 ) -> vol.Schema:
     return vol.Schema(
         {
             vol.Required(CONF_WALLET_NAME, default=name): str,
             vol.Required(CONF_BASE_CURRENCY, default=currency): _CURRENCY_SELECTOR,
             vol.Required(CONF_SCAN_INTERVAL, default=interval): _INTERVAL_SELECTOR,
+            vol.Optional(CONF_INVESTED_AMOUNT, default=invested): _AMOUNT_SELECTOR,
         }
     )
 
@@ -85,6 +96,7 @@ class MyWalletConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._name: str | None = None
         self._currency: str = DEFAULT_BASE_CURRENCY
         self._interval: int = DEFAULT_SCAN_INTERVAL
+        self._invested: float | None = None
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Step 1: basic wallet settings."""
@@ -97,10 +109,13 @@ class MyWalletConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self._name = name
                 self._currency = user_input[CONF_BASE_CURRENCY]
                 self._interval = user_input[CONF_SCAN_INTERVAL]
+                self._invested = _normalize_invested(user_input.get(CONF_INVESTED_AMOUNT))
                 return await self.async_step_valor()
         return self.async_show_form(
             step_id="user",
-            data_schema=_settings_schema(self._name, self._currency, self._interval),
+            data_schema=_settings_schema(
+                self._name, self._currency, self._interval, self._invested
+            ),
             errors=errors,
         )
 
@@ -135,15 +150,15 @@ class MyWalletConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     def _create_entry(self) -> FlowResult:
-        return self.async_create_entry(
-            title=self._name or "Wallet",
-            data={
-                CONF_WALLET_NAME: self._name,
-                CONF_BASE_CURRENCY: self._currency,
-                CONF_SCAN_INTERVAL: self._interval,
-                CONF_VALORS: self._valors,
-            },
-        )
+        data: dict[str, Any] = {
+            CONF_WALLET_NAME: self._name,
+            CONF_BASE_CURRENCY: self._currency,
+            CONF_SCAN_INTERVAL: self._interval,
+            CONF_VALORS: self._valors,
+        }
+        if self._invested is not None:
+            data[CONF_INVESTED_AMOUNT] = self._invested
+        return self.async_create_entry(title=self._name or "Wallet", data=data)
 
     @staticmethod
     @callback
@@ -186,6 +201,10 @@ class MyWalletOptionsFlow(config_entries.OptionsFlowWithConfigEntry):
                         CONF_WALLET_NAME: name,
                         CONF_BASE_CURRENCY: user_input[CONF_BASE_CURRENCY],
                         CONF_SCAN_INTERVAL: user_input[CONF_SCAN_INTERVAL],
+                        # None clears a previously set amount and disables profit tracking.
+                        CONF_INVESTED_AMOUNT: _normalize_invested(
+                            user_input.get(CONF_INVESTED_AMOUNT)
+                        ),
                     },
                 )
         data = self.config_entry.data
@@ -195,6 +214,7 @@ class MyWalletOptionsFlow(config_entries.OptionsFlowWithConfigEntry):
                 data.get(CONF_WALLET_NAME, self.config_entry.title),
                 data.get(CONF_BASE_CURRENCY, DEFAULT_BASE_CURRENCY),
                 data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
+                data.get(CONF_INVESTED_AMOUNT),
             ),
             errors=errors,
         )

@@ -22,11 +22,14 @@ from .const import (
     ATTR_DAY_CHANGE,
     ATTR_DAY_CHANGE_PCT,
     ATTR_FX_RATE,
+    ATTR_INVESTED,
     ATTR_PREVIOUS_CLOSE,
     ATTR_QUOTE_CURRENCY,
     ATTR_SHORT_NAME,
     ATTR_SYMBOL,
+    ATTR_TOTAL,
     ATTR_UNIT_PRICE,
+    CONF_INVESTED_AMOUNT,
     CONF_VALORS,
     CONF_WALLET_NAME,
     DOMAIN,
@@ -36,6 +39,14 @@ from .const import (
 from .coordinator import WalletCoordinator, WalletData
 
 _REFRESH_SCHEMA: dict[str, Any] = {}
+
+
+def _invested_amount(entry: ConfigEntry) -> float | None:
+    """Positive invested amount from the entry, or None when profit tracking is off."""
+    value = entry.data.get(CONF_INVESTED_AMOUNT)
+    if value is None or float(value) <= 0:
+        return None
+    return float(value)
 
 
 async def async_setup_entry(
@@ -48,6 +59,9 @@ async def async_setup_entry(
 
     entities: list[SensorEntity] = [
         WalletTotalSensor(coordinator, entry),
+        WalletInvestedSensor(coordinator, entry),
+        WalletProfitSensor(coordinator, entry),
+        WalletProfitPctSensor(coordinator, entry),
     ]
     entities.extend(
         ValorSensor(coordinator, entry, valor[VALOR_SYMBOL])
@@ -71,7 +85,14 @@ def _cleanup_orphaned_entities(hass: HomeAssistant, entry: ConfigEntry) -> None:
     registry = er.async_get(hass)
     valid_symbols = {valor[VALOR_SYMBOL] for valor in entry.data.get(CONF_VALORS, [])}
     valid_unique_ids = {f"{entry.entry_id}_{s}" for s in valid_symbols}
-    valid_unique_ids.add(f"{entry.entry_id}_total")
+    valid_unique_ids.update(
+        {
+            f"{entry.entry_id}_total",
+            f"{entry.entry_id}_invested",
+            f"{entry.entry_id}_profit",
+            f"{entry.entry_id}_profit_pct",
+        }
+    )
 
     for entity_entry in er.async_entries_for_config_entry(registry, entry.entry_id):
         if entity_entry.unique_id not in valid_unique_ids:
@@ -189,4 +210,94 @@ class WalletTotalSensor(WalletBaseSensor):
             "unavailable_valors": sorted(
                 symbol for symbol, valor in data.valors.items() if not valor.available
             ),
+        }
+
+
+class WalletInvestedSensor(WalletBaseSensor):
+    """Amount invested in the wallet (user-provided), in base currency."""
+
+    _attr_icon = "mdi:cash-lock"
+
+    def __init__(self, coordinator: WalletCoordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator, entry)
+        self._attr_unique_id = f"{entry.entry_id}_invested"
+        self._attr_translation_key = "wallet_invested"
+
+    @property
+    def native_value(self) -> float | None:
+        return _invested_amount(self._entry)
+
+    @property
+    def available(self) -> bool:
+        return _invested_amount(self._entry) is not None
+
+
+class WalletProfitSensor(WalletBaseSensor):
+    """Unrealized profit of the wallet: total value minus invested amount."""
+
+    _attr_icon = "mdi:chart-line"
+
+    def __init__(self, coordinator: WalletCoordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator, entry)
+        self._attr_unique_id = f"{entry.entry_id}_profit"
+        self._attr_translation_key = "wallet_profit"
+
+    @property
+    def native_value(self) -> float | None:
+        invested = _invested_amount(self._entry)
+        total = self.coordinator.data.total
+        if invested is None or total is None:
+            return None
+        return round(total - invested, 2)
+
+    @property
+    def available(self) -> bool:
+        return (
+            super().available
+            and _invested_amount(self._entry) is not None
+            and self.coordinator.data.total is not None
+        )
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        return {
+            ATTR_INVESTED: _invested_amount(self._entry),
+            ATTR_TOTAL: self.coordinator.data.total,
+        }
+
+
+class WalletProfitPctSensor(WalletBaseSensor):
+    """Unrealized profit of the wallet in percent of the invested amount."""
+
+    _attr_icon = "mdi:percent"
+
+    def __init__(self, coordinator: WalletCoordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator, entry)
+        self._attr_unique_id = f"{entry.entry_id}_profit_pct"
+        self._attr_translation_key = "wallet_profit_pct"
+        self._attr_device_class = None
+        self._attr_state_class = SensorStateClass.MEASUREMENT
+        self._attr_native_unit_of_measurement = "%"
+
+    @property
+    def native_value(self) -> float | None:
+        invested = _invested_amount(self._entry)
+        total = self.coordinator.data.total
+        if invested is None or total is None:
+            return None
+        return round((total - invested) / invested * 100, 2)
+
+    @property
+    def available(self) -> bool:
+        return (
+            super().available
+            and _invested_amount(self._entry) is not None
+            and self.coordinator.data.total is not None
+        )
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        return {
+            ATTR_INVESTED: _invested_amount(self._entry),
+            ATTR_TOTAL: self.coordinator.data.total,
         }

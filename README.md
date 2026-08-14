@@ -19,10 +19,14 @@ Home Assistant. Each wallet is a config entry that holds a list of **valors**
 - **Currency conversion** — each wallet has a base currency; valors quoted in
   a foreign currency are converted using live Yahoo FX rates
   (e.g. `USDPLN=X`).
+- **Invested amount & profit** — optionally set how much you invested in a
+  wallet (in its base currency) to get *Invested*, *Profit*, and *Profit %*
+  sensors alongside the total.
 - **Sensors** — one sensor per valor (value, unit price, FX rate, day change)
   plus a wallet *Total* sensor, all grouped under one device per wallet.
 - **`my_wallet.refresh` service** — force an immediate update of selected
   wallets without waiting for the schedule.
+- **Translations** — English, Polish, and Czech.
 
 No external Python dependencies — prices are fetched directly from Yahoo
 Finance's chart API using `aiohttp`.
@@ -49,6 +53,8 @@ your Home Assistant configuration and restart.
    - **Wallet name**
    - **Base currency** — currency the wallet total is displayed in
    - **Update interval** — minutes between Yahoo Finance updates
+   - **Invested amount** *(optional)* — how much you invested, in the base
+     currency; enables the profit sensors
 3. Add valors: enter the **Yahoo Finance symbol** and the **amount** of units
    you hold. Tick *Add another valor* to keep adding, or submit to finish.
 
@@ -56,7 +62,7 @@ your Home Assistant configuration and restart.
 
 Open the config entry and click **Configure** to:
 
-- edit wallet settings (name, base currency, update interval),
+- edit wallet settings (name, base currency, update interval, invested amount),
 - add a valor,
 - remove a valor,
 - change a valor's amount.
@@ -69,6 +75,13 @@ Changes take effect immediately (the wallet reloads automatically).
 |---|---|---|
 | `sensor.<wallet>_<symbol>` | valor value in base currency | `amount`, `unit_price`, `quote_currency`, `fx_rate`, `day_change`, `day_change_pct`, `short_name` |
 | `sensor.<wallet>_total` | wallet total in base currency | `valors` (per-valor breakdown), `unavailable_valors` |
+| `sensor.<wallet>_invested` | invested amount (unavailable when not set) | — |
+| `sensor.<wallet>_profit` | `total − invested` | `invested`, `total` |
+| `sensor.<wallet>_profit_pct` | profit as % of the invested amount | `invested`, `total` |
+
+The invested amount is entered in the wallet's base currency and is **not**
+re-converted automatically — if you change the base currency later, update the
+invested amount yourself.
 
 ## Service
 

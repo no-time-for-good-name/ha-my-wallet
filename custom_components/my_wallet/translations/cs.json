@@ -1,0 +1,111 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Vytvořit peněženku",
+        "description": "Nakonfigurujte peněženku s tržními instrumenty oceňovanými pomocí Yahoo Finance.",
+        "data": {
+          "wallet_name": "Název peněženky",
+          "base_currency": "Základní měna (celková hodnota peněženky se zobrazuje v této měně)",
+          "scan_interval": "Interval aktualizace (minuty)",
+          "invested_amount": "Investovaná částka (volitelné, v základní měně; umožňuje sledování zisku)"
+        }
+      },
+      "valor": {
+        "title": "Přidat instrument",
+        "description": "Přidejte do této peněženky tržní instrument. Používejte symboly Yahoo Finance, např. AAPL, VWAGY, BTC-USD nebo ETF jako VWCE.DE.",
+        "data": {
+          "symbol": "Symbol (Yahoo Finance)",
+          "amount": "Množství (počet jednotek)",
+          "add_another": "Po tomto instrumentu přidat další"
+        }
+      }
+    },
+    "error": {
+      "invalid_name": "Zadejte název peněženky.",
+      "invalid_symbol": "Zadejte platný symbol Yahoo Finance.",
+      "symbol_exists": "Tento symbol se již v peněžence nachází."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Spravovat peněženku",
+        "menu_options": {
+          "settings": "Nastavení peněženky (název, měna, interval, investovaná částka)",
+          "add_valor": "Přidat instrument",
+          "remove_valor": "Odebrat instrument",
+          "edit_valor": "Změnit množství instrumentu"
+        }
+      },
+      "settings": {
+        "title": "Nastavení peněženky",
+        "data": {
+          "wallet_name": "Název peněženky",
+          "base_currency": "Základní měna",
+          "scan_interval": "Interval aktualizace (minuty)",
+          "invested_amount": "Investovaná částka (volitelné, v základní měně; vymažte pro vypnutí sledování zisku)"
+        }
+      },
+      "add_valor": {
+        "title": "Přidat instrument",
+        "data": {
+          "symbol": "Symbol (Yahoo Finance)",
+          "amount": "Množství (počet jednotek)"
+        }
+      },
+      "remove_valor": {
+        "title": "Odebrat instrument",
+        "data": {
+          "symbol": "Instrument k odebrání"
+        }
+      },
+      "edit_valor": {
+        "title": "Změna množství",
+        "data": {
+          "symbol": "Instrument"
+        }
+      },
+      "edit_valor_amount": {
+        "title": "Změna množství",
+        "description": "Instrument: {symbol}",
+        "data": {
+          "amount": "Nové množství (počet jednotek)"
+        }
+      }
+    },
+    "error": {
+      "invalid_name": "Zadejte název peněženky.",
+      "invalid_symbol": "Zadejte platný symbol Yahoo Finance.",
+      "symbol_exists": "Tento symbol se již v peněžence nachází."
+    },
+    "abort": {
+      "no_valors": "Peněženka zatím neobsahuje žádné instrumenty."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "valor": {
+        "name": "{symbol}"
+      },
+      "wallet_total": {
+        "name": "Celkem"
+      },
+      "wallet_invested": {
+        "name": "Investováno"
+      },
+      "wallet_profit": {
+        "name": "Zisk"
+      },
+      "wallet_profit_pct": {
+        "name": "Zisk %"
+      }
+    }
+  },
+  "services": {
+    "refresh": {
+      "name": "Obnovit peněženku",
+      "description": "Vynutit okamžitou aktualizaci cen vybraných peněženek."
+    }
+  }
+}

@@ -6,8 +6,9 @@
         "description": "Skonfiguruj portfel z walorami rynkowymi wycenianymi przez Yahoo Finance.",
         "data": {
           "wallet_name": "Nazwa portfela",
-          "base_currency": "Waluta bazowa (total portfela prezentowany w tej walucie)",
-          "scan_interval": "Częstotliwość aktualizacji (minuty)"
+          "base_currency": "Waluta bazowa (wartość portfela prezentowana w tej walucie)",
+          "scan_interval": "Częstotliwość aktualizacji (minuty)",
+          "invested_amount": "Kwota zainwestowana (opcjonalnie, w walucie bazowej; umożliwia śledzenie zysku)"
         }
       },
       "valor": {
@@ -31,7 +32,7 @@
       "init": {
         "title": "Zarządzaj portfelem",
         "menu_options": {
-          "settings": "Ustawienia portfela (nazwa, waluta, częstotliwość)",
+          "settings": "Ustawienia portfela (nazwa, waluta, częstotliwość, kwota zainwestowana)",
           "add_valor": "Dodaj walor",
           "remove_valor": "Usuń walor",
           "edit_valor": "Zmień ilość waloru"
@@ -42,7 +43,8 @@
         "data": {
           "wallet_name": "Nazwa portfela",
           "base_currency": "Waluta bazowa",
-          "scan_interval": "Częstotliwość aktualizacji (minuty)"
+          "scan_interval": "Częstotliwość aktualizacji (minuty)",
+          "invested_amount": "Kwota zainwestowana (opcjonalnie, w walucie bazowej; wyczyść, aby wyłączyć śledzenie zysku)"
         }
       },
       "add_valor": {
@@ -87,7 +89,16 @@
         "name": "{symbol}"
       },
       "wallet_total": {
-        "name": "Total"
+        "name": "Suma"
+      },
+      "wallet_invested": {
+        "name": "Zainwestowane"
+      },
+      "wallet_profit": {
+        "name": "Zysk"
+      },
+      "wallet_profit_pct": {
+        "name": "Zysk %"
       }
     }
   },

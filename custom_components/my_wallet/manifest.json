@@ -7,5 +7,5 @@
   "integration_type": "service",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/no-time-for-good-name/ha-my-wallet/issues",
-  "version": "1.0.2"
+  "version": "1.1.0-beta1"
 }

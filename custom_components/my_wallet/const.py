@@ -16,6 +16,7 @@ CONF_WALLET_NAME: Final = "wallet_name"
 CONF_BASE_CURRENCY: Final = "base_currency"
 CONF_SCAN_INTERVAL: Final = "scan_interval"  # minutes
 CONF_VALORS: Final = "valors"
+CONF_INVESTED_AMOUNT: Final = "invested_amount"  # optional, in base currency
 
 # Valor keys
 VALOR_SYMBOL: Final = "symbol"
@@ -62,5 +63,7 @@ ATTR_DAY_CHANGE_PCT: Final = "day_change_pct"
 ATTR_PREVIOUS_CLOSE: Final = "previous_close"
 ATTR_SHORT_NAME: Final = "short_name"
 ATTR_VALORS: Final = "valors"
+ATTR_INVESTED: Final = "invested"
+ATTR_TOTAL: Final = "total"
 
 UPDATE_MIN_INTERVAL: Final = timedelta(minutes=MIN_SCAN_INTERVAL)
