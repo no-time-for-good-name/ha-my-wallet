@@ -129,6 +129,8 @@ class WalletBaseSensor(CoordinatorEntity[WalletCoordinator], SensorEntity):
 class ValorSensor(WalletBaseSensor):
     """Value of a single valor (amount x price x FX rate) in base currency."""
 
+    _attr_icon = "mdi:chart-box-outline"
+
     def __init__(
         self, coordinator: WalletCoordinator, entry: ConfigEntry, symbol: str
     ) -> None:
@@ -182,6 +184,8 @@ class ValorSensor(WalletBaseSensor):
 
 class WalletTotalSensor(WalletBaseSensor):
     """Total value of all valors in the wallet, in base currency."""
+
+    _attr_icon = "mdi:wallet-outline"
 
     def __init__(self, coordinator: WalletCoordinator, entry: ConfigEntry) -> None:
         super().__init__(coordinator, entry)
