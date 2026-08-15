@@ -81,7 +81,12 @@ def _settings_schema(
             vol.Required(CONF_WALLET_NAME, default=name): str,
             vol.Required(CONF_BASE_CURRENCY, default=currency): _CURRENCY_SELECTOR,
             vol.Required(CONF_SCAN_INTERVAL, default=interval): _INTERVAL_SELECTOR,
-            vol.Optional(CONF_INVESTED_AMOUNT, default=invested): _AMOUNT_SELECTOR,
+            # Suggested value (not default): an empty optional field is then omitted
+            # from the submitted data instead of being sent as null, which the
+            # number selector would reject with "expected float".
+            vol.Optional(
+                CONF_INVESTED_AMOUNT, description={"suggested_value": invested}
+            ): vol.Any(None, _AMOUNT_SELECTOR),
         }
     )
 
