@@ -24,6 +24,7 @@ from .const import (
     MIN_SCAN_INTERVAL,
     VALOR_AMOUNT,
     VALOR_SYMBOL,
+    VALOR_TARGET_SHARE,
 )
 from .yahoo import Quote, fetch_fx_rates, fetch_quotes
 
@@ -39,6 +40,7 @@ class ValorData:
     quote: Quote | None = None
     fx_rate: float | None = None
     error: str | None = None
+    target_share: float | None = None
 
     @property
     def available(self) -> bool:
@@ -50,6 +52,11 @@ class ValorData:
         if not self.available:
             return None
         return self.amount * self.quote.price * self.fx_rate
+
+    @property
+    def has_target(self) -> bool:
+        """Whether a target share is configured for this valor."""
+        return self.target_share is not None and self.target_share > 0
 
 
 @dataclass
@@ -114,8 +121,12 @@ class WalletCoordinator(DataUpdateCoordinator[WalletData]):
         for valor in valors:
             symbol = valor[VALOR_SYMBOL]
             amount = float(valor[VALOR_AMOUNT])
+            target = valor.get(VALOR_TARGET_SHARE)
+            target = float(target) if target is not None and float(target) > 0 else None
             quote = quotes.get(symbol)
-            item = ValorData(symbol=symbol, amount=amount, quote=quote)
+            item = ValorData(
+                symbol=symbol, amount=amount, quote=quote, target_share=target
+            )
             if quote is None:
                 item.error = "quote_unavailable"
             elif quote.currency == self.base_currency:

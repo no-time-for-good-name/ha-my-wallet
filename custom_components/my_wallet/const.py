@@ -21,6 +21,7 @@ CONF_INVESTED_AMOUNT: Final = "invested_amount"  # optional, in base currency
 # Valor keys
 VALOR_SYMBOL: Final = "symbol"
 VALOR_AMOUNT: Final = "amount"
+VALOR_TARGET_SHARE: Final = "target_share"  # optional, percent of the wallet
 
 # Defaults
 DEFAULT_BASE_CURRENCY: Final = "EUR"
@@ -65,5 +66,13 @@ ATTR_SHORT_NAME: Final = "short_name"
 ATTR_VALORS: Final = "valors"
 ATTR_INVESTED: Final = "invested"
 ATTR_TOTAL: Final = "total"
+ATTR_SHARE: Final = "share"
+ATTR_TARGET_SHARE: Final = "target_share"
+ATTR_SHARE_DEVIATION: Final = "share_deviation"
+ATTR_REBALANCE_AMOUNT: Final = "rebalance_amount"
+ATTR_VALUE: Final = "value"
+
+# Tolerance when validating the sum of target shares (floating point safety).
+TARGET_SHARE_SUM_TOLERANCE: Final = 0.005
 
 UPDATE_MIN_INTERVAL: Final = timedelta(minutes=MIN_SCAN_INTERVAL)

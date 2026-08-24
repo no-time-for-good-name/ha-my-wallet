@@ -17,6 +17,7 @@
         "data": {
           "symbol": "Symbol (Yahoo Finance)",
           "amount": "Amount (units held)",
+          "target_share": "Target share (%; optional — percent of the wallet this valor should hold; enables the deviation sensor)",
           "add_another": "Add another valor after this one"
         }
       }
@@ -24,7 +25,8 @@
     "error": {
       "invalid_name": "Please enter a wallet name.",
       "invalid_symbol": "Please enter a valid Yahoo Finance symbol.",
-      "symbol_exists": "This symbol is already in the wallet."
+      "symbol_exists": "This symbol is already in the wallet.",
+      "target_sum_exceeded": "The sum of target shares would exceed 100%."
     }
   },
   "options": {
@@ -35,7 +37,7 @@
           "settings": "Edit wallet settings (name, currency, interval, invested amount)",
           "add_valor": "Add a valor",
           "remove_valor": "Remove a valor",
-          "edit_valor": "Change a valor's amount"
+          "edit_valor": "Edit a valor (amount, target share)"
         }
       },
       "settings": {
@@ -51,7 +53,8 @@
         "title": "Add a valor",
         "data": {
           "symbol": "Symbol (Yahoo Finance)",
-          "amount": "Amount (units held)"
+          "amount": "Amount (units held)",
+          "target_share": "Target share (%; optional — percent of the wallet this valor should hold)"
         }
       },
       "remove_valor": {
@@ -61,23 +64,25 @@
         }
       },
       "edit_valor": {
-        "title": "Change amount",
+        "title": "Edit a valor",
         "data": {
           "symbol": "Valor"
         }
       },
-      "edit_valor_amount": {
-        "title": "Change amount",
+      "edit_valor_fields": {
+        "title": "Edit a valor",
         "description": "Valor: {symbol}",
         "data": {
-          "amount": "New amount (units held)"
+          "amount": "New amount (units held)",
+          "target_share": "Target share (%; clear to remove the target)"
         }
       }
     },
     "error": {
       "invalid_name": "Please enter a wallet name.",
       "invalid_symbol": "Please enter a valid Yahoo Finance symbol.",
-      "symbol_exists": "This symbol is already in the wallet."
+      "symbol_exists": "This symbol is already in the wallet.",
+      "target_sum_exceeded": "The sum of target shares would exceed 100%."
     },
     "abort": {
       "no_valors": "The wallet has no valors yet."
@@ -99,6 +104,9 @@
       },
       "wallet_profit_pct": {
         "name": "Profit %"
+      },
+      "valor_deviation": {
+        "name": "{symbol} target deviation"
       }
     }
   },

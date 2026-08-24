@@ -25,8 +25,12 @@ from .const import (
     ATTR_INVESTED,
     ATTR_PREVIOUS_CLOSE,
     ATTR_QUOTE_CURRENCY,
+    ATTR_REBALANCE_AMOUNT,
+    ATTR_SHARE,
+    ATTR_SHARE_DEVIATION,
     ATTR_SHORT_NAME,
     ATTR_SYMBOL,
+    ATTR_TARGET_SHARE,
     ATTR_TOTAL,
     ATTR_UNIT_PRICE,
     CONF_INVESTED_AMOUNT,
@@ -36,7 +40,7 @@ from .const import (
     SERVICE_REFRESH,
     VALOR_SYMBOL,
 )
-from .coordinator import WalletCoordinator, WalletData
+from .coordinator import ValorData, WalletCoordinator, WalletData
 
 _REFRESH_SCHEMA: dict[str, Any] = {}
 
@@ -47,6 +51,13 @@ def _invested_amount(entry: ConfigEntry) -> float | None:
     if value is None or float(value) <= 0:
         return None
     return float(value)
+
+
+def _share(valor: ValorData, total: float | None) -> float | None:
+    """Actual share of the valor in the wallet total, in percent (2 decimals)."""
+    if total is None or valor.value is None or total <= 0:
+        return None
+    return round(valor.value / total * 100, 2)
 
 
 async def async_setup_entry(
@@ -67,6 +78,10 @@ async def async_setup_entry(
         ValorSensor(coordinator, entry, valor[VALOR_SYMBOL])
         for valor in coordinator.valors
     )
+    entities.extend(
+        ValorDeviationSensor(coordinator, entry, valor[VALOR_SYMBOL])
+        for valor in coordinator.valors
+    )
     async_add_entities(entities)
     _cleanup_orphaned_entities(hass, entry)
 
@@ -85,6 +100,7 @@ def _cleanup_orphaned_entities(hass: HomeAssistant, entry: ConfigEntry) -> None:
     registry = er.async_get(hass)
     valid_symbols = {valor[VALOR_SYMBOL] for valor in entry.data.get(CONF_VALORS, [])}
     valid_unique_ids = {f"{entry.entry_id}_{s}" for s in valid_symbols}
+    valid_unique_ids.update(f"{entry.entry_id}_{s}_deviation" for s in valid_symbols)
     valid_unique_ids.update(
         {
             f"{entry.entry_id}_total",
@@ -177,8 +193,85 @@ class ValorSensor(WalletBaseSensor):
         }
         if quote.short_name:
             attributes[ATTR_SHORT_NAME] = quote.short_name
+        total = self.data.total
+        share = _share(valor, total)
+        if share is not None:
+            attributes[ATTR_SHARE] = share
+            if valor.has_target:
+                # Positive deviation: the valor is overweight vs its target.
+                attributes[ATTR_SHARE_DEVIATION] = round(
+                    valor.value / total * 100 - valor.target_share, 2
+                )
+                # Positive rebalance amount: buy for this much to reach the target.
+                attributes[ATTR_REBALANCE_AMOUNT] = round(
+                    total * valor.target_share / 100 - valor.value, 2
+                )
+        if valor.has_target:
+            attributes[ATTR_TARGET_SHARE] = valor.target_share
         if valor.error:
             attributes["error"] = valor.error
+        return attributes
+
+
+class ValorDeviationSensor(WalletBaseSensor):
+    """Deviation of a valor's actual share from its target share, in percent points."""
+
+    _attr_icon = "mdi:target-variant"
+
+    def __init__(
+        self, coordinator: WalletCoordinator, entry: ConfigEntry, symbol: str
+    ) -> None:
+        super().__init__(coordinator, entry)
+        self._symbol = symbol
+        self._attr_unique_id = f"{entry.entry_id}_{symbol}_deviation"
+        self._attr_translation_key = "valor_deviation"
+        self._attr_translation_placeholders = {"symbol": symbol}
+        self._attr_device_class = None
+        self._attr_state_class = SensorStateClass.MEASUREMENT
+        self._attr_native_unit_of_measurement = "%"
+
+    @property
+    def _valor(self) -> ValorData | None:
+        return self.coordinator.data.valors.get(self._symbol)
+
+    @property
+    def native_value(self) -> float | None:
+        """Actual share minus target share; positive when the valor is overweight."""
+        valor = self._valor
+        total = self.coordinator.data.total
+        if valor is None or not valor.has_target or total is None or total <= 0:
+            return None
+        if valor.value is None:
+            return None
+        return round(valor.value / total * 100 - valor.target_share, 2)
+
+    @property
+    def available(self) -> bool:
+        valor = self._valor
+        return (
+            super().available
+            and valor is not None
+            and valor.available
+            and valor.has_target
+            and self.coordinator.data.total is not None
+        )
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        valor = self._valor
+        total = self.coordinator.data.total
+        attributes: dict[str, Any] = {ATTR_SYMBOL: self._symbol}
+        if valor is None or not valor.has_target:
+            return attributes
+        attributes[ATTR_TARGET_SHARE] = valor.target_share
+        if valor.value is None or total is None or total <= 0:
+            return attributes
+        attributes[ATTR_SHARE] = _share(valor, total)
+        attributes[ATTR_VALUE] = round(valor.value, 2)
+        # Positive rebalance amount: buy for this much to reach the target.
+        attributes[ATTR_REBALANCE_AMOUNT] = round(
+            total * valor.target_share / 100 - valor.value, 2
+        )
         return attributes
 
 
@@ -200,6 +293,7 @@ class WalletTotalSensor(WalletBaseSensor):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         data = self.coordinator.data
+        total = data.total
         return {
             "valors": {
                 symbol: {
@@ -208,6 +302,8 @@ class WalletTotalSensor(WalletBaseSensor):
                     "unit_price": valor.quote.price if valor.quote else None,
                     "quote_currency": valor.quote.currency if valor.quote else None,
                     "fx_rate": valor.fx_rate,
+                    "share": _share(valor, total),
+                    "target_share": valor.target_share,
                 }
                 for symbol, valor in data.valors.items()
             },

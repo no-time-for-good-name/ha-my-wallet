@@ -17,6 +17,7 @@
         "data": {
           "symbol": "Symbol (Yahoo Finance)",
           "amount": "Ilość (liczba jednostek)",
+          "target_share": "Udział docelowy (%; opcjonalnie — jaki procent portfela powinien stanowić ten walor; włącza sensor odchylenia)",
           "add_another": "Po tym walorze dodaj kolejny"
         }
       }
@@ -24,7 +25,8 @@
     "error": {
       "invalid_name": "Podaj nazwę portfela.",
       "invalid_symbol": "Podaj poprawny symbol Yahoo Finance.",
-      "symbol_exists": "Ten symbol znajduje się już w portfelu."
+      "symbol_exists": "Ten symbol znajduje się już w portfelu.",
+      "target_sum_exceeded": "Suma udziałów docelowych przekroczy 100%."
     }
   },
   "options": {
@@ -35,7 +37,7 @@
           "settings": "Ustawienia portfela (nazwa, waluta, częstotliwość, kwota zainwestowana)",
           "add_valor": "Dodaj walor",
           "remove_valor": "Usuń walor",
-          "edit_valor": "Zmień ilość waloru"
+          "edit_valor": "Edytuj walor (ilość, udział docelowy)"
         }
       },
       "settings": {
@@ -51,7 +53,8 @@
         "title": "Dodaj walor",
         "data": {
           "symbol": "Symbol (Yahoo Finance)",
-          "amount": "Ilość (liczba jednostek)"
+          "amount": "Ilość (liczba jednostek)",
+          "target_share": "Udział docelowy (%; opcjonalnie — jaki procent portfela powinien stanowić ten walor)"
         }
       },
       "remove_valor": {
@@ -61,23 +64,25 @@
         }
       },
       "edit_valor": {
-        "title": "Zmiana ilości",
+        "title": "Edycja waloru",
         "data": {
           "symbol": "Walor"
         }
       },
-      "edit_valor_amount": {
-        "title": "Zmiana ilości",
+      "edit_valor_fields": {
+        "title": "Edycja waloru",
         "description": "Walor: {symbol}",
         "data": {
-          "amount": "Nowa ilość (liczba jednostek)"
+          "amount": "Nowa ilość (liczba jednostek)",
+          "target_share": "Udział docelowy (%; wyczyść, aby usunąć cel)"
         }
       }
     },
     "error": {
       "invalid_name": "Podaj nazwę portfela.",
       "invalid_symbol": "Podaj poprawny symbol Yahoo Finance.",
-      "symbol_exists": "Ten symbol znajduje się już w portfelu."
+      "symbol_exists": "Ten symbol znajduje się już w portfelu.",
+      "target_sum_exceeded": "Suma udziałów docelowych przekroczy 100%."
     },
     "abort": {
       "no_valors": "Portfel nie ma jeszcze żadnych walorów."
@@ -99,6 +104,9 @@
       },
       "wallet_profit_pct": {
         "name": "Zysk %"
+      },
+      "valor_deviation": {
+        "name": "{symbol} odchylenie od celu"
       }
     }
   },

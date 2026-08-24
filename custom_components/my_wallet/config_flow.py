@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Any
 
 import voluptuous as vol
@@ -22,8 +23,10 @@ from .const import (
     DOMAIN,
     MAX_SCAN_INTERVAL,
     MIN_SCAN_INTERVAL,
+    TARGET_SHARE_SUM_TOLERANCE,
     VALOR_AMOUNT,
     VALOR_SYMBOL,
+    VALOR_TARGET_SHARE,
 )
 
 _CURRENCY_SELECTOR = selector.SelectSelector(
@@ -52,12 +55,31 @@ _INTERVAL_SELECTOR = selector.NumberSelector(
     )
 )
 
+_TARGET_SHARE_SELECTOR = selector.NumberSelector(
+    selector.NumberSelectorConfig(
+        min=0,
+        max=100,
+        step=0.01,
+        unit_of_measurement="%",
+        mode=selector.NumberSelectorMode.BOX,
+    )
+)
 
-def _valor_schema(symbol: str | None = None, amount: float | None = None) -> vol.Schema:
+
+def _valor_schema(
+    symbol: str | None = None,
+    amount: float | None = None,
+    target_share: float | None = None,
+) -> vol.Schema:
     return vol.Schema(
         {
             vol.Required(VALOR_SYMBOL, default=symbol): str,
             vol.Required(VALOR_AMOUNT, default=amount): _AMOUNT_SELECTOR,
+            # Suggested value (not default): an empty optional field is then
+            # omitted from the submitted data instead of being sent as null.
+            vol.Optional(
+                VALOR_TARGET_SHARE, description={"suggested_value": target_share}
+            ): vol.Any(None, _TARGET_SHARE_SELECTOR),
         }
     )
 
@@ -68,6 +90,24 @@ def _normalize_invested(value: Any) -> float | None:
         return None
     invested = float(value)
     return invested if invested > 0 else None
+
+
+def _normalize_target_share(value: Any) -> float | None:
+    """Return a target share in (0, 100] or None when no target is set."""
+    if value is None:
+        return None
+    target = float(value)
+    return target if target > 0 else None
+
+
+def _targets_sum(valors: Iterable[dict[str, Any]]) -> float:
+    """Sum of configured target shares."""
+    return sum(float(v.get(VALOR_TARGET_SHARE) or 0) for v in valors)
+
+
+def _target_sum_exceeded(others: Iterable[dict[str, Any]], target: float) -> bool:
+    """Whether adding `target` on top of the other valors would exceed 100%."""
+    return _targets_sum(others) + target > 100 + TARGET_SHARE_SUM_TOLERANCE
 
 
 def _settings_schema(
@@ -127,15 +167,27 @@ class MyWalletConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_valor(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Step 2..n: add valors one by one until the user stops."""
         errors: dict[str, str] = {}
+        # Re-submit the entered values when the form is shown again after an error.
+        schema = _valor_schema(
+            user_input.get(VALOR_SYMBOL) if user_input else None,
+            float(user_input[VALOR_AMOUNT]) if user_input else None,
+            user_input.get(VALOR_TARGET_SHARE) if user_input else None,
+        ).extend({vol.Optional("add_another", default=True): bool})
         if user_input is not None:
             symbol = user_input[VALOR_SYMBOL].strip().upper()
             amount = float(user_input[VALOR_AMOUNT])
+            target = _normalize_target_share(user_input.get(VALOR_TARGET_SHARE))
             if not symbol:
                 errors[VALOR_SYMBOL] = "invalid_symbol"
             elif any(v[VALOR_SYMBOL] == symbol for v in self._valors):
                 errors[VALOR_SYMBOL] = "symbol_exists"
+            elif target is not None and _target_sum_exceeded(self._valors, target):
+                errors[VALOR_TARGET_SHARE] = "target_sum_exceeded"
             else:
-                self._valors.append({VALOR_SYMBOL: symbol, VALOR_AMOUNT: amount})
+                valor: dict[str, Any] = {VALOR_SYMBOL: symbol, VALOR_AMOUNT: amount}
+                if target is not None:
+                    valor[VALOR_TARGET_SHARE] = target
+                self._valors.append(valor)
                 if not user_input.get("add_another"):
                     return self._create_entry()
                 # Re-show an empty form for the next valor.
@@ -146,13 +198,7 @@ class MyWalletConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     ),
                     errors=errors,
                 )
-        return self.async_show_form(
-            step_id="valor",
-            data_schema=_valor_schema().extend(
-                {vol.Optional("add_another", default=True): bool}
-            ),
-            errors=errors,
-        )
+        return self.async_show_form(step_id="valor", data_schema=schema, errors=errors)
 
     def _create_entry(self) -> FlowResult:
         data: dict[str, Any] = {
@@ -227,6 +273,11 @@ class MyWalletOptionsFlow(config_entries.OptionsFlowWithConfigEntry):
     async def async_step_add_valor(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         errors: dict[str, str] = {}
         valors = self._valors()
+        schema = _valor_schema(
+            user_input.get(VALOR_SYMBOL) if user_input else None,
+            float(user_input[VALOR_AMOUNT]) if user_input else None,
+            user_input.get(VALOR_TARGET_SHARE) if user_input else None,
+        )
         if user_input is not None:
             symbol = user_input[VALOR_SYMBOL].strip().upper()
             if not symbol:
@@ -234,11 +285,19 @@ class MyWalletOptionsFlow(config_entries.OptionsFlowWithConfigEntry):
             elif any(v[VALOR_SYMBOL] == symbol for v in valors):
                 errors[VALOR_SYMBOL] = "symbol_exists"
             else:
-                valors.append({VALOR_SYMBOL: symbol, VALOR_AMOUNT: float(user_input[VALOR_AMOUNT])})
-                return await self._save(valors)
-        return self.async_show_form(
-            step_id="add_valor", data_schema=_valor_schema(), errors=errors
-        )
+                target = _normalize_target_share(user_input.get(VALOR_TARGET_SHARE))
+                if target is not None and _target_sum_exceeded(valors, target):
+                    errors[VALOR_TARGET_SHARE] = "target_sum_exceeded"
+                else:
+                    valor: dict[str, Any] = {
+                        VALOR_SYMBOL: symbol,
+                        VALOR_AMOUNT: float(user_input[VALOR_AMOUNT]),
+                    }
+                    if target is not None:
+                        valor[VALOR_TARGET_SHARE] = target
+                    valors.append(valor)
+                    return await self._save(valors)
+        return self.async_show_form(step_id="add_valor", data_schema=schema, errors=errors)
 
     async def async_step_remove_valor(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         valors = self._valors()
@@ -262,7 +321,7 @@ class MyWalletOptionsFlow(config_entries.OptionsFlowWithConfigEntry):
         )
 
     async def async_step_edit_valor(self, user_input: dict[str, Any] | None = None) -> FlowResult:
-        """Ask which valor to edit, then delegate to the amount step."""
+        """Ask which valor to edit, then delegate to the fields step."""
         valors = self._valors()
         if not valors:
             return self.async_abort(reason="no_valors")
@@ -270,9 +329,16 @@ class MyWalletOptionsFlow(config_entries.OptionsFlowWithConfigEntry):
             self._edit_symbol = user_input[VALOR_SYMBOL]
             current = next(v for v in valors if v[VALOR_SYMBOL] == self._edit_symbol)
             return self.async_show_form(
-                step_id="edit_valor_amount",
+                step_id="edit_valor_fields",
                 data_schema=vol.Schema(
-                    {vol.Required(VALOR_AMOUNT, default=current[VALOR_AMOUNT]): _AMOUNT_SELECTOR}
+                    {
+                        vol.Required(VALOR_AMOUNT, default=current[VALOR_AMOUNT]): _AMOUNT_SELECTOR,
+                        # Clearing the field removes the target share.
+                        vol.Optional(
+                            VALOR_TARGET_SHARE,
+                            description={"suggested_value": current.get(VALOR_TARGET_SHARE)},
+                        ): vol.Any(None, _TARGET_SHARE_SELECTOR),
+                    }
                 ),
                 description_placeholders={VALOR_SYMBOL: self._edit_symbol},
             )
@@ -290,13 +356,39 @@ class MyWalletOptionsFlow(config_entries.OptionsFlowWithConfigEntry):
             ),
         )
 
-    async def async_step_edit_valor_amount(self, user_input: dict[str, Any] | None = None) -> FlowResult:
-        """Apply the new amount for the previously selected valor."""
+    async def async_step_edit_valor_fields(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+        """Apply the new amount / target share for the previously selected valor."""
         symbol = self._edit_symbol
-        new_valors = [
-            {VALOR_SYMBOL: v[VALOR_SYMBOL], VALOR_AMOUNT: float(user_input[VALOR_AMOUNT])}
-            if v[VALOR_SYMBOL] == symbol
-            else v
-            for v in self._valors()
-        ]
+        valors = self._valors()
+        target = _normalize_target_share(user_input.get(VALOR_TARGET_SHARE))
+        others = (v for v in valors if v[VALOR_SYMBOL] != symbol)
+        if target is not None and _target_sum_exceeded(others, target):
+            return self.async_show_form(
+                step_id="edit_valor_fields",
+                data_schema=vol.Schema(
+                    {
+                        vol.Required(
+                            VALOR_AMOUNT, default=float(user_input[VALOR_AMOUNT])
+                        ): _AMOUNT_SELECTOR,
+                        vol.Optional(
+                            VALOR_TARGET_SHARE,
+                            description={"suggested_value": user_input.get(VALOR_TARGET_SHARE)},
+                        ): vol.Any(None, _TARGET_SHARE_SELECTOR),
+                    }
+                ),
+                description_placeholders={VALOR_SYMBOL: symbol},
+                errors={VALOR_TARGET_SHARE: "target_sum_exceeded"},
+            )
+        new_valors = []
+        for v in valors:
+            if v[VALOR_SYMBOL] != symbol:
+                new_valors.append(v)
+                continue
+            item = dict(v)  # preserve keys we do not edit
+            item[VALOR_AMOUNT] = float(user_input[VALOR_AMOUNT])
+            if target is not None:
+                item[VALOR_TARGET_SHARE] = target
+            else:
+                item.pop(VALOR_TARGET_SHARE, None)
+            new_valors.append(item)
         return await self._save(new_valors)

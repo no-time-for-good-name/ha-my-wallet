@@ -17,6 +17,7 @@
         "data": {
           "symbol": "Symbol (Yahoo Finance)",
           "amount": "Množství (počet jednotek)",
+          "target_share": "Cílový podíl (%; volitelné — jaké procento peněženky by měl tento instrument tvořit; aktivuje senzor odchylky)",
           "add_another": "Po tomto instrumentu přidat další"
         }
       }
@@ -24,7 +25,8 @@
     "error": {
       "invalid_name": "Zadejte název peněženky.",
       "invalid_symbol": "Zadejte platný symbol Yahoo Finance.",
-      "symbol_exists": "Tento symbol se již v peněžence nachází."
+      "symbol_exists": "Tento symbol se již v peněžence nachází.",
+      "target_sum_exceeded": "Součet cílových podílů by překročil 100 %."
     }
   },
   "options": {
@@ -35,7 +37,7 @@
           "settings": "Nastavení peněženky (název, měna, interval, investovaná částka)",
           "add_valor": "Přidat instrument",
           "remove_valor": "Odebrat instrument",
-          "edit_valor": "Změnit množství instrumentu"
+          "edit_valor": "Upravit instrument (množství, cílový podíl)"
         }
       },
       "settings": {
@@ -51,7 +53,8 @@
         "title": "Přidat instrument",
         "data": {
           "symbol": "Symbol (Yahoo Finance)",
-          "amount": "Množství (počet jednotek)"
+          "amount": "Množství (počet jednotek)",
+          "target_share": "Cílový podíl (%; volitelné — jaké procento peněženky by měl tento instrument tvořit)"
         }
       },
       "remove_valor": {
@@ -61,23 +64,25 @@
         }
       },
       "edit_valor": {
-        "title": "Změna množství",
+        "title": "Úprava instrumentu",
         "data": {
           "symbol": "Instrument"
         }
       },
-      "edit_valor_amount": {
-        "title": "Změna množství",
+      "edit_valor_fields": {
+        "title": "Úprava instrumentu",
         "description": "Instrument: {symbol}",
         "data": {
-          "amount": "Nové množství (počet jednotek)"
+          "amount": "Nové množství (počet jednotek)",
+          "target_share": "Cílový podíl (%; vymažte pro odstranění cíle)"
         }
       }
     },
     "error": {
       "invalid_name": "Zadejte název peněženky.",
       "invalid_symbol": "Zadejte platný symbol Yahoo Finance.",
-      "symbol_exists": "Tento symbol se již v peněžence nachází."
+      "symbol_exists": "Tento symbol se již v peněžence nachází.",
+      "target_sum_exceeded": "Součet cílových podílů by překročil 100 %."
     },
     "abort": {
       "no_valors": "Peněženka zatím neobsahuje žádné instrumenty."
@@ -99,6 +104,9 @@
       },
       "wallet_profit_pct": {
         "name": "Zisk %"
+      },
+      "valor_deviation": {
+        "name": "{symbol} odchylka od cíle"
       }
     }
   },
