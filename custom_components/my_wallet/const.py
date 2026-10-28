@@ -17,6 +17,9 @@ CONF_BASE_CURRENCY: Final = "base_currency"
 CONF_SCAN_INTERVAL: Final = "scan_interval"  # minutes
 CONF_VALORS: Final = "valors"
 CONF_INVESTED_AMOUNT: Final = "invested_amount"  # optional, in base currency
+CONF_REBALANCE_PRECISION: Final = "rebalance_precision"  # decimal places, 0-3
+DEFAULT_REBALANCE_PRECISION: Final = 0
+MAX_REBALANCE_PRECISION: Final = 3
 
 # Valor keys
 VALOR_SYMBOL: Final = "symbol"
@@ -78,6 +81,8 @@ ATTR_SHARE: Final = "share"
 ATTR_TARGET_SHARE: Final = "target_share"
 ATTR_SHARE_DEVIATION: Final = "share_deviation"
 ATTR_REBALANCE_AMOUNT: Final = "rebalance_amount"
+ATTR_REBALANCE_UNITS: Final = "rebalance_units"
+ATTR_REBALANCE_PRECISION: Final = "rebalance_precision"
 ATTR_VALUE: Final = "value"
 
 # Tolerance when validating the sum of target shares (floating point safety).

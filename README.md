@@ -81,8 +81,8 @@ Changes take effect immediately (the wallet reloads automatically).
 
 | Entity | State | Useful attributes |
 |---|---|---|
-| `sensor.<wallet>_<symbol>` | valor value in base currency | `amount`, `unit_price`, `quote_currency`, `fx_rate`, `day_change`, `day_change_pct`, `short_name`, `share`, `target_share`, `share_deviation`, `rebalance_amount` |
-| `sensor.<wallet>_<symbol>_deviation` | actual share − target share, in percent points (unavailable when no target is set) | `target_share`, `share`, `value`, `rebalance_amount` |
+| `sensor.<wallet>_<symbol>` | valor value in base currency | `amount`, `unit_price`, `quote_currency`, `fx_rate`, `day_change`, `day_change_pct`, `short_name`, `share`, `target_share`, `share_deviation`, `rebalance_amount`, `rebalance_units`, `rebalance_precision` |
+| `sensor.<wallet>_<symbol>_deviation` | actual share − target share, in percent points (unavailable when no target is set) | `target_share`, `share`, `value`, `rebalance_amount`, `rebalance_units`, `rebalance_precision` |
 | `sensor.<wallet>_total` | wallet total in base currency | `valors` (per-valor breakdown incl. `share`, `target_share`), `unavailable_valors` |
 | `sensor.<wallet>_invested` | invested amount (unavailable when not set) | — |
 | `sensor.<wallet>_profit` | `total − invested` | `invested`, `total` |
@@ -103,6 +103,12 @@ of the wallet it should represent. The integration then computes:
 - `rebalance_amount` — `wallet total × target% − valor value` in the base
   currency; **positive is the amount to buy** to reach the target, negative
   the amount to sell.
+- `rebalance_units` — the same rebalance expressed in **units of the valor**:
+  `−1` means *sell 1 unit*, `2` means *buy 2 units*. It is computed in the
+  context of the whole wallet (other valors' target shares included) and
+  rounded to the wallet's **rebalance precision** — a per-wallet setting
+  (0–3 decimal places, default 0) in the wallet settings. With precision 0
+  the wallet only rebalances in whole units; 1–3 allow fractional buys/sells.
 
 Shares are calculated against the total of currently *available* valors —
 if one symbol temporarily fails to update, the remaining shares are relative

@@ -30,6 +30,8 @@ from .const import (
     ATTR_PREVIOUS_CLOSE,
     ATTR_QUOTE_CURRENCY,
     ATTR_REBALANCE_AMOUNT,
+    ATTR_REBALANCE_PRECISION,
+    ATTR_REBALANCE_UNITS,
     ATTR_SHARE,
     ATTR_SHARE_DEVIATION,
     ATTR_SHORT_NAME,
@@ -287,6 +289,12 @@ class ValorSensor(WalletBaseSensor):
                 )
         if valor.has_target:
             attributes[ATTR_TARGET_SHARE] = valor.target_share
+            if valor.rebalance_units is not None:
+                # Positive: buy this many units, negative: sell them.
+                attributes[ATTR_REBALANCE_UNITS] = valor.rebalance_units
+                attributes[ATTR_REBALANCE_PRECISION] = (
+                    self.coordinator.rebalance_precision
+                )
         if valor.error:
             attributes["error"] = valor.error
         return attributes
@@ -351,6 +359,10 @@ class ValorDeviationSensor(WalletBaseSensor):
         attributes[ATTR_REBALANCE_AMOUNT] = round(
             total * valor.target_share / 100 - valor.value, 2
         )
+        if valor.rebalance_units is not None:
+            # Positive: buy this many units, negative: sell them.
+            attributes[ATTR_REBALANCE_UNITS] = valor.rebalance_units
+            attributes[ATTR_REBALANCE_PRECISION] = self.coordinator.rebalance_precision
         return attributes
 
 
@@ -383,6 +395,7 @@ class WalletTotalSensor(WalletBaseSensor):
                     "fx_rate": valor.fx_rate,
                     "share": _share(valor, total),
                     "target_share": valor.target_share,
+                    "rebalance_units": valor.rebalance_units,
                 }
                 for symbol, valor in data.valors.items()
             },
