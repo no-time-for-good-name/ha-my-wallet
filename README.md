@@ -118,6 +118,26 @@ target:
 
 Refreshes the whole wallet that owns the targeted entity, immediately.
 
+### Adjust invested amount
+
+```yaml
+service: my_wallet.adjust_invested
+data:
+  entity_id: sensor.my_wallet_total
+  operation: deposit   # deposit | withdraw | set
+  amount: 1000.0
+```
+
+Updates the wallet's invested amount and stores the result in its
+configuration:
+
+- `deposit` — adds `amount` to the current invested amount,
+- `withdraw` — subtracts `amount` (rejected if the result would be negative),
+- `set` — replaces the invested amount with `amount`.
+
+Any sensor of the wallet can be used as `entity_id`. Profit and profit %
+sensors update immediately after the call.
+
 ## Notes
 
 - Update interval is per wallet; Yahoo may rate-limit very aggressive

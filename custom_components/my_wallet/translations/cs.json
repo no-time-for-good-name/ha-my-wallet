@@ -114,6 +114,24 @@
     "refresh": {
       "name": "Obnovit peněženku",
       "description": "Vynutit okamžitou aktualizaci cen vybraných peněženek."
+    },
+    "adjust_invested": {
+      "name": "Upravit investovanou částku",
+      "description": "Aktualizovat investovanou částku peněženky vkladem (přidat), výběrem (odečíst) nebo nastavením přesné hodnoty. Změna se uloží do konfigurace peněženky.",
+      "fields": {
+        "entity": {
+          "name": "Peněženka",
+          "description": "Libovolný senzor peněženky, jejíž investovaná částka se má změnit."
+        },
+        "operation": {
+          "name": "Operace",
+          "description": "deposit: přidat částku, withdraw: odečíst, set: nastavit přesnou hodnotu."
+        },
+        "amount": {
+          "name": "Částka",
+          "description": "Částka v základní měně peněženky (nesmí být záporná)."
+        }
+      }
     }
   }
 }

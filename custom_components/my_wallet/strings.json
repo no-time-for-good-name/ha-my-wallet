@@ -114,6 +114,24 @@
     "refresh": {
       "name": "Refresh wallet",
       "description": "Force an immediate price update for the selected wallet(s)."
+    },
+    "adjust_invested": {
+      "name": "Adjust invested amount",
+      "description": "Update the invested amount of a wallet via a deposit (add), a withdrawal (subtract) or by setting an exact value. The change is stored in the wallet configuration.",
+      "fields": {
+        "entity": {
+          "name": "Wallet",
+          "description": "Any sensor of the wallet whose invested amount should be changed."
+        },
+        "operation": {
+          "name": "Operation",
+          "description": "deposit: add the amount, withdraw: subtract it, set: replace the value."
+        },
+        "amount": {
+          "name": "Amount",
+          "description": "Amount in the wallet's base currency (must be non-negative)."
+        }
+      }
     }
   }
 }

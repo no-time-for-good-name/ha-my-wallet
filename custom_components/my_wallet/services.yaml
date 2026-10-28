@@ -7,3 +7,41 @@ refresh:
     entity:
       integration: my_wallet
       domain: sensor
+adjust_invested:
+  name: Adjust invested amount
+  description: >-
+    Update the invested amount of a wallet via a deposit (add),
+    a withdrawal (subtract) or by setting an exact value.
+    The change is stored in the wallet configuration.
+  fields:
+    entity:
+      name: Wallet
+      description: Any sensor of the wallet whose invested amount should be changed.
+      required: true
+      selector:
+        entity:
+          integration: my_wallet
+          domain: sensor
+    operation:
+      name: Operation
+      description: "deposit: add the amount, withdraw: subtract it, set: replace the value."
+      required: true
+      selector:
+        select:
+          options:
+            - label: Deposit (add)
+              value: deposit
+            - label: Withdraw (subtract)
+              value: withdraw
+            - label: Set exact value
+              value: set
+    amount:
+      name: Amount
+      description: Amount in the wallet's base currency (must be non-negative).
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 10000000000
+          step: 0.01
+          mode: box

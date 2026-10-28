@@ -4,14 +4,17 @@ from __future__ import annotations
 
 from typing import Any
 
+import voluptuous as vol
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_platform, entity_registry as er
+from homeassistant.const import ATTR_ENTITY_ID
+from homeassistant.core import HomeAssistant, ServiceCall, callback
+from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import entity_platform, entity_registry as er, selector
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -23,6 +26,7 @@ from .const import (
     ATTR_DAY_CHANGE_PCT,
     ATTR_FX_RATE,
     ATTR_INVESTED,
+    ATTR_OPERATION,
     ATTR_PREVIOUS_CLOSE,
     ATTR_QUOTE_CURRENCY,
     ATTR_REBALANCE_AMOUNT,
@@ -38,6 +42,10 @@ from .const import (
     CONF_VALORS,
     CONF_WALLET_NAME,
     DOMAIN,
+    OPERATION_DEPOSIT,
+    OPERATION_SET,
+    OPERATION_WITHDRAW,
+    SERVICE_ADJUST_INVESTED,
     SERVICE_REFRESH,
     VALOR_SYMBOL,
 )
@@ -93,6 +101,76 @@ async def async_setup_entry(
             SERVICE_REFRESH,
             _REFRESH_SCHEMA,
             "async_refresh_wallet",
+        )
+
+    # my_wallet.adjust_invested: deposit / withdraw / set the invested amount.
+    if not hass.services.has_service(DOMAIN, SERVICE_ADJUST_INVESTED):
+
+        @callback
+        async def _async_adjust_invested(service: ServiceCall) -> None:
+            entity_id: str = service.data[ATTR_ENTITY_ID]
+            registry = er.async_get(hass)
+            entity_entry = registry.async_get(entity_id)
+            resolved_entry_id = (
+                entity_entry.config_entry_id
+                if entity_entry and entity_entry.config_entry_id
+                else None
+            )
+            if resolved_entry_id is None:
+                raise HomeAssistantError(
+                    f"{entity_id} does not belong to a {DOMAIN} config entry."
+                )
+            target_entry = hass.config_entries.async_get_entry(resolved_entry_id)
+            if target_entry is None or target_entry.domain != DOMAIN:
+                raise HomeAssistantError(
+                    f"Unknown {DOMAIN} config entry for {entity_id}."
+                )
+            operation: str = service.data[ATTR_OPERATION]
+            amount = float(service.data[ATTR_AMOUNT])
+            current = target_entry.data.get(CONF_INVESTED_AMOUNT)
+            current = float(current) if current is not None else 0.0
+            if operation == OPERATION_SET:
+                new_value = amount
+            elif operation == OPERATION_DEPOSIT:
+                new_value = current + amount
+            else:  # OPERATION_WITHDRAW
+                new_value = current - amount
+                if new_value < 0:
+                    raise HomeAssistantError(
+                        "Withdrawal would make the invested amount negative "
+                        f"(current: {current}, withdrawal: {amount})."
+                    )
+            data = dict(target_entry.data)
+            data[CONF_INVESTED_AMOUNT] = round(new_value, 2)
+            hass.config_entries.async_update_entry(target_entry, data=data)
+
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_ADJUST_INVESTED,
+            _async_adjust_invested,
+            schema=vol.Schema(
+                {
+                    vol.Required(ATTR_ENTITY_ID): selector.EntitySelector(
+                        selector.EntitySelectorConfig(
+                            integration=DOMAIN, domain="sensor"
+                        )
+                    ),
+                    vol.Required(ATTR_OPERATION): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=[OPERATION_DEPOSIT, OPERATION_WITHDRAW, OPERATION_SET],
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                        )
+                    ),
+                    vol.Required(ATTR_AMOUNT): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            min=0,
+                            max=10_000_000_000,
+                            step=0.01,
+                            mode=selector.NumberSelectorMode.BOX,
+                        )
+                    ),
+                }
+            ),
         )
 
 
