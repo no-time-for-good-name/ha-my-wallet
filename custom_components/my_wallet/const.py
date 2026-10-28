@@ -31,6 +31,14 @@ MAX_SCAN_INTERVAL: Final = 1440
 
 # Service names
 SERVICE_REFRESH: Final = "refresh"
+SERVICE_ADJUST_INVESTED: Final = "adjust_invested"
+
+# Service fields / operations for adjust_invested
+ATTR_ENTRY: Final = "entry"  # sensor entity of the wallet
+ATTR_OPERATION: Final = "operation"
+OPERATION_DEPOSIT: Final = "deposit"  # add to the invested amount
+OPERATION_WITHDRAW: Final = "withdraw"  # subtract from the invested amount
+OPERATION_SET: Final = "set"  # replace the invested amount with a fixed value
 
 # Common currencies offered in the config flow
 COMMON_CURRENCIES: Final = [

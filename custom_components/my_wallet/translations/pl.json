@@ -114,6 +114,24 @@
     "refresh": {
       "name": "Odśwież portfel",
       "description": "Wymuś natychmiastową aktualizację cen wybranych portfeli."
+    },
+    "adjust_invested": {
+      "name": "Zmień kwotę zainwestowaną",
+      "description": "Zaktualizuj kwotę zainwestowaną w portfelu poprzez wpłatę (dodanie), wypłatę (odjęcie) lub ustawienie dokładnej wartości. Zmiana zostaje zapisana w konfiguracji portfela.",
+      "fields": {
+        "entity": {
+          "name": "Portfel",
+          "description": "Dowolny sensor portfela, którego kwota zainwestowana ma zostać zmieniona."
+        },
+        "operation": {
+          "name": "Operacja",
+          "description": "deposit: dodaj kwotę, withdraw: odejmij, set: ustaw dokładną wartość."
+        },
+        "amount": {
+          "name": "Kwota",
+          "description": "Kwota w walucie bazowej portfela (nie może być ujemna)."
+        }
+      }
     }
   }
 }
