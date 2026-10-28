@@ -138,6 +138,10 @@ configuration:
 Any sensor of the wallet can be used as `entity_id`. Profit and profit %
 sensors update immediately after the call.
 
+The same operation is available from the UI: *Configure* →
+**Adjust the invested amount** — pick the operation (deposit / withdraw /
+set), enter the amount, and the form shows the current invested amount.
+
 ## Notes
 
 - Update interval is per wallet; Yahoo may rate-limit very aggressive
