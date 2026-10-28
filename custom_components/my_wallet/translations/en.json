@@ -8,6 +8,7 @@
           "wallet_name": "Wallet name",
           "base_currency": "Base currency (wallet total is shown in this currency)",
           "scan_interval": "Update interval (minutes)",
+          "rebalance_precision": "Rebalance precision (decimal places for rebalance units: 0 = whole units only, 1-3 = fractional units allowed)",
           "invested_amount": "Invested amount (optional, in the base currency; enables profit tracking)"
         }
       },
@@ -46,6 +47,7 @@
           "wallet_name": "Wallet name",
           "base_currency": "Base currency",
           "scan_interval": "Update interval (minutes)",
+          "rebalance_precision": "Rebalance precision (decimal places for rebalance units: 0 = whole units only, 1-3 = fractional units allowed)",
           "invested_amount": "Invested amount (optional, in the base currency; set empty to disable profit tracking)"
         }
       },

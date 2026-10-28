@@ -17,12 +17,15 @@ from .const import (
     COMMON_CURRENCIES,
     CONF_BASE_CURRENCY,
     CONF_INVESTED_AMOUNT,
+    CONF_REBALANCE_PRECISION,
     CONF_SCAN_INTERVAL,
     CONF_VALORS,
     CONF_WALLET_NAME,
     DEFAULT_BASE_CURRENCY,
+    DEFAULT_REBALANCE_PRECISION,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
+    MAX_REBALANCE_PRECISION,
     MAX_SCAN_INTERVAL,
     MIN_SCAN_INTERVAL,
     OPERATION_DEPOSIT,
@@ -56,6 +59,15 @@ _INTERVAL_SELECTOR = selector.NumberSelector(
         max=MAX_SCAN_INTERVAL,
         step=1,
         unit_of_measurement="min",
+        mode=selector.NumberSelectorMode.BOX,
+    )
+)
+
+_REBALANCE_PRECISION_SELECTOR = selector.NumberSelector(
+    selector.NumberSelectorConfig(
+        min=0,
+        max=MAX_REBALANCE_PRECISION,
+        step=1,
         mode=selector.NumberSelectorMode.BOX,
     )
 )
@@ -95,6 +107,13 @@ def _normalize_invested(value: Any) -> float | None:
         return None
     invested = float(value)
     return invested if invested > 0 else None
+
+
+def _normalize_precision(value: Any) -> int:
+    """Clamp the rebalance precision to the allowed 0..MAX range."""
+    if value is None:
+        return DEFAULT_REBALANCE_PRECISION
+    return min(MAX_REBALANCE_PRECISION, max(0, int(value)))
 
 
 def _operation_schema(
@@ -142,12 +161,16 @@ def _settings_schema(
     currency: str = DEFAULT_BASE_CURRENCY,
     interval: int = DEFAULT_SCAN_INTERVAL,
     invested: float | None = None,
+    precision: int = DEFAULT_REBALANCE_PRECISION,
 ) -> vol.Schema:
     return vol.Schema(
         {
             vol.Required(CONF_WALLET_NAME, default=name): str,
             vol.Required(CONF_BASE_CURRENCY, default=currency): _CURRENCY_SELECTOR,
             vol.Required(CONF_SCAN_INTERVAL, default=interval): _INTERVAL_SELECTOR,
+            vol.Required(
+                CONF_REBALANCE_PRECISION, default=precision
+            ): _REBALANCE_PRECISION_SELECTOR,
             # Suggested value (not default): an empty optional field is then omitted
             # from the submitted data instead of being sent as null, which the
             # number selector would reject with "expected float".
@@ -169,6 +192,7 @@ class MyWalletConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._currency: str = DEFAULT_BASE_CURRENCY
         self._interval: int = DEFAULT_SCAN_INTERVAL
         self._invested: float | None = None
+        self._precision: int = DEFAULT_REBALANCE_PRECISION
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Step 1: basic wallet settings."""
@@ -182,11 +206,14 @@ class MyWalletConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self._currency = user_input[CONF_BASE_CURRENCY]
                 self._interval = user_input[CONF_SCAN_INTERVAL]
                 self._invested = _normalize_invested(user_input.get(CONF_INVESTED_AMOUNT))
+                self._precision = _normalize_precision(
+                    user_input.get(CONF_REBALANCE_PRECISION)
+                )
                 return await self.async_step_valor()
         return self.async_show_form(
             step_id="user",
             data_schema=_settings_schema(
-                self._name, self._currency, self._interval, self._invested
+                self._name, self._currency, self._interval, self._invested, self._precision
             ),
             errors=errors,
         )
@@ -232,6 +259,7 @@ class MyWalletConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             CONF_WALLET_NAME: self._name,
             CONF_BASE_CURRENCY: self._currency,
             CONF_SCAN_INTERVAL: self._interval,
+            CONF_REBALANCE_PRECISION: self._precision,
             CONF_VALORS: self._valors,
         }
         if self._invested is not None:
@@ -310,6 +338,9 @@ class MyWalletOptionsFlow(config_entries.OptionsFlowWithConfigEntry):
                         CONF_WALLET_NAME: name,
                         CONF_BASE_CURRENCY: user_input[CONF_BASE_CURRENCY],
                         CONF_SCAN_INTERVAL: user_input[CONF_SCAN_INTERVAL],
+                        CONF_REBALANCE_PRECISION: _normalize_precision(
+                            user_input.get(CONF_REBALANCE_PRECISION)
+                        ),
                         # None clears a previously set amount and disables profit tracking.
                         CONF_INVESTED_AMOUNT: _normalize_invested(
                             user_input.get(CONF_INVESTED_AMOUNT)
@@ -324,6 +355,7 @@ class MyWalletOptionsFlow(config_entries.OptionsFlowWithConfigEntry):
                 data.get(CONF_BASE_CURRENCY, DEFAULT_BASE_CURRENCY),
                 data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
                 data.get(CONF_INVESTED_AMOUNT),
+                data.get(CONF_REBALANCE_PRECISION, DEFAULT_REBALANCE_PRECISION),
             ),
             errors=errors,
         )

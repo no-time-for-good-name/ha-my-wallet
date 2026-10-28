@@ -16,10 +16,13 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .const import (
     CONF_BASE_CURRENCY,
+    CONF_REBALANCE_PRECISION,
     CONF_SCAN_INTERVAL,
     CONF_VALORS,
+    DEFAULT_REBALANCE_PRECISION,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
+    MAX_REBALANCE_PRECISION,
     MAX_SCAN_INTERVAL,
     MIN_SCAN_INTERVAL,
     VALOR_AMOUNT,
@@ -41,6 +44,7 @@ class ValorData:
     fx_rate: float | None = None
     error: str | None = None
     target_share: float | None = None
+    rebalance_units: float | None = None
 
     @property
     def available(self) -> bool:
@@ -84,6 +88,12 @@ class WalletCoordinator(DataUpdateCoordinator[WalletData]):
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         self.entry = entry
         self.base_currency: str = entry.data[CONF_BASE_CURRENCY]
+        precision = int(
+            entry.data.get(CONF_REBALANCE_PRECISION, DEFAULT_REBALANCE_PRECISION)
+        )
+        self.rebalance_precision: int = min(
+            MAX_REBALANCE_PRECISION, max(0, precision)
+        )
         interval = min(MAX_SCAN_INTERVAL, max(MIN_SCAN_INTERVAL, int(entry.data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL))))
         super().__init__(
             hass,
@@ -136,6 +146,27 @@ class WalletCoordinator(DataUpdateCoordinator[WalletData]):
                 if item.fx_rate is None:
                     item.error = "fx_rate_unavailable"
             data.valors[symbol] = item
+
+        # Rebalance in whole wallet context: how many units to buy (+) or sell
+        # (-) so the valor's value reaches total × target share. Rounded to the
+        # wallet-configured number of decimal places (0 = whole units only).
+        total = data.total
+        if total is not None and total > 0:
+            for item in data.valors.values():
+                if (
+                    not item.has_target
+                    or item.quote is None
+                    or not item.quote.price
+                    or item.value is None
+                    or not item.fx_rate
+                ):
+                    continue
+                target_value = total * item.target_share / 100
+                unit_value = item.quote.price * item.fx_rate  # per-unit value in base currency
+                item.rebalance_units = round(
+                    (target_value - item.value) / unit_value,
+                    self.rebalance_precision,
+                )
 
         if not data.all_available:
             _LOGGER.warning(

@@ -8,6 +8,7 @@
           "wallet_name": "Nazwa portfela",
           "base_currency": "Waluta bazowa (wartość portfela prezentowana w tej walucie)",
           "scan_interval": "Częstotliwość aktualizacji (minuty)",
+          "rebalance_precision": "Precyzja rebalansu (miejsca dziesiętne dla jednostek rebalansu: 0 = tylko całe jednostki, 1-3 = dozwolone jednostki ułamkowe)",
           "invested_amount": "Kwota zainwestowana (opcjonalnie, w walucie bazowej; umożliwia śledzenie zysku)"
         }
       },
@@ -47,6 +48,7 @@
           "wallet_name": "Nazwa portfela",
           "base_currency": "Waluta bazowa",
           "scan_interval": "Częstotliwość aktualizacji (minuty)",
+          "rebalance_precision": "Precyzja rebalansu (miejsca dziesiętne dla jednostek rebalansu: 0 = tylko całe jednostki, 1-3 = dozwolone jednostki ułamkowe)",
           "invested_amount": "Kwota zainwestowana (opcjonalnie, w walucie bazowej; wyczyść, aby wyłączyć śledzenie zysku)"
         }
       },

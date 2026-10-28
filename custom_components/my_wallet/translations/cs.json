@@ -8,6 +8,7 @@
           "wallet_name": "Název peněženky",
           "base_currency": "Základní měna (celková hodnota peněženky se zobrazuje v této měně)",
           "scan_interval": "Interval aktualizace (minuty)",
+          "rebalance_precision": "Přesnost rebalancování (desetinná místa pro jednotky rebalancování: 0 = pouze celé jednotky, 1-3 = povoleny zlomkové jednotky)",
           "invested_amount": "Investovaná částka (volitelné, v základní měně; umožňuje sledování zisku)"
         }
       },
@@ -47,6 +48,7 @@
           "wallet_name": "Název peněženky",
           "base_currency": "Základní měna",
           "scan_interval": "Interval aktualizace (minuty)",
+          "rebalance_precision": "Přesnost rebalancování (desetinná místa pro jednotky rebalancování: 0 = pouze celé jednotky, 1-3 = povoleny zlomkové jednotky)",
           "invested_amount": "Investovaná částka (volitelné, v základní měně; vymažte pro vypnutí sledování zisku)"
         }
       },
