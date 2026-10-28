@@ -12,6 +12,8 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import selector
 
 from .const import (
+    ATTR_AMOUNT,
+    ATTR_OPERATION,
     COMMON_CURRENCIES,
     CONF_BASE_CURRENCY,
     CONF_INVESTED_AMOUNT,
@@ -23,6 +25,9 @@ from .const import (
     DOMAIN,
     MAX_SCAN_INTERVAL,
     MIN_SCAN_INTERVAL,
+    OPERATION_DEPOSIT,
+    OPERATION_SET,
+    OPERATION_WITHDRAW,
     TARGET_SHARE_SUM_TOLERANCE,
     VALOR_AMOUNT,
     VALOR_SYMBOL,
@@ -90,6 +95,28 @@ def _normalize_invested(value: Any) -> float | None:
         return None
     invested = float(value)
     return invested if invested > 0 else None
+
+
+def _operation_schema(
+    current: float | None = None,
+    operation: str | None = None,
+    amount: float | None = None,
+) -> vol.Schema:
+    """Form for adjusting the invested amount from the options menu."""
+    return vol.Schema(
+        {
+            vol.Required(
+                ATTR_OPERATION,
+                default=operation or OPERATION_DEPOSIT,
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=[OPERATION_DEPOSIT, OPERATION_WITHDRAW, OPERATION_SET],
+                    mode=selector.SelectSelectorMode.DROPDOWN,
+                )
+            ),
+            vol.Required(ATTR_AMOUNT, default=amount): _AMOUNT_SELECTOR,
+        }
+    )
 
 
 def _normalize_target_share(value: Any) -> float | None:
@@ -227,7 +254,38 @@ class MyWalletOptionsFlow(config_entries.OptionsFlowWithConfigEntry):
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Show the management menu."""
         self._edit_symbol = None
-        return self.async_show_menu(step_id="init", menu_options=["settings", "add_valor", "remove_valor", "edit_valor"])
+        return self.async_show_menu(
+            step_id="init",
+            menu_options=["settings", "add_valor", "edit_valor", "remove_valor", "adjust_invested"],
+        )
+
+    async def async_step_adjust_invested(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+        """Adjust the invested amount (deposit / withdraw / set)."""
+        errors: dict[str, str] = {}
+        current = self.config_entry.data.get(CONF_INVESTED_AMOUNT)
+        current = float(current) if current is not None else 0.0
+        if user_input is not None:
+            operation: str = user_input[ATTR_OPERATION]
+            amount = float(user_input[ATTR_AMOUNT])
+            if operation == OPERATION_SET:
+                new_value = amount
+            elif operation == OPERATION_DEPOSIT:
+                new_value = current + amount
+            else:  # OPERATION_WITHDRAW
+                new_value = current - amount
+                if new_value < 0:
+                    errors[ATTR_AMOUNT] = "invested_negative"
+            if not errors:
+                return await self._save(
+                    self._valors(),
+                    **{CONF_INVESTED_AMOUNT: round(new_value, 2)},
+                )
+        return self.async_show_form(
+            step_id="adjust_invested",
+            data_schema=_operation_schema(current),
+            errors=errors,
+            description_placeholders={"current": f"{current:g}"},
+        )
 
     def _valors(self) -> list[dict[str, Any]]:
         return list(self.config_entry.data.get(CONF_VALORS, []))

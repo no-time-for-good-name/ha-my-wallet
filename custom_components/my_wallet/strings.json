@@ -37,7 +37,8 @@
           "settings": "Edit wallet settings (name, currency, interval, invested amount)",
           "add_valor": "Add a valor",
           "remove_valor": "Remove a valor",
-          "edit_valor": "Edit a valor (amount, target share)"
+          "edit_valor": "Edit a valor (amount, target share)",
+          "adjust_invested": "Adjust the invested amount (deposit, withdrawal)"
         }
       },
       "settings": {
@@ -63,6 +64,14 @@
           "symbol": "Valor to remove"
         }
       },
+      "adjust_invested": {
+        "title": "Adjust invested amount",
+        "description": "Current invested amount: {current}",
+        "data": {
+          "operation": "Operation",
+          "amount": "Amount"
+        }
+      },
       "edit_valor": {
         "title": "Edit a valor",
         "data": {
@@ -82,7 +91,8 @@
       "invalid_name": "Please enter a wallet name.",
       "invalid_symbol": "Please enter a valid Yahoo Finance symbol.",
       "symbol_exists": "This symbol is already in the wallet.",
-      "target_sum_exceeded": "The sum of target shares would exceed 100%."
+      "target_sum_exceeded": "The sum of target shares would exceed 100%.",
+      "invested_negative": "The withdrawal would make the invested amount negative."
     },
     "abort": {
       "no_valors": "The wallet has no valors yet."

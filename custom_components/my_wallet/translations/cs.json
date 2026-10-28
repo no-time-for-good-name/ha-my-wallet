@@ -37,7 +37,8 @@
           "settings": "Nastavení peněženky (název, měna, interval, investovaná částka)",
           "add_valor": "Přidat instrument",
           "remove_valor": "Odebrat instrument",
-          "edit_valor": "Upravit instrument (množství, cílový podíl)"
+          "edit_valor": "Upravit instrument (množství, cílový podíl)",
+          "adjust_invested": "Upravit investovanou částku (vklad, výběr)"
         }
       },
       "settings": {
@@ -63,6 +64,14 @@
           "symbol": "Instrument k odebrání"
         }
       },
+      "adjust_invested": {
+        "title": "Upravit investovanou částku",
+        "description": "Aktuální investovaná částka: {current}",
+        "data": {
+          "operation": "Operace",
+          "amount": "Částka"
+        }
+      },
       "edit_valor": {
         "title": "Úprava instrumentu",
         "data": {
@@ -82,7 +91,8 @@
       "invalid_name": "Zadejte název peněženky.",
       "invalid_symbol": "Zadejte platný symbol Yahoo Finance.",
       "symbol_exists": "Tento symbol se již v peněžence nachází.",
-      "target_sum_exceeded": "Součet cílových podílů by překročil 100 %."
+      "target_sum_exceeded": "Součet cílových podílů by překročil 100 %.",
+      "invested_negative": "Výběr by vedl k záporné investované částce."
     },
     "abort": {
       "no_valors": "Peněženka zatím neobsahuje žádné instrumenty."

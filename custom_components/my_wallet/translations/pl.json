@@ -37,7 +37,8 @@
           "settings": "Ustawienia portfela (nazwa, waluta, częstotliwość, kwota zainwestowana)",
           "add_valor": "Dodaj walor",
           "remove_valor": "Usuń walor",
-          "edit_valor": "Edytuj walor (ilość, udział docelowy)"
+          "edit_valor": "Edytuj walor (ilość, udział docelowy)",
+          "adjust_invested": "Zmień kwotę zainwestowaną (wpłata, wypłata)"
         }
       },
       "settings": {
@@ -63,6 +64,14 @@
           "symbol": "Walor do usunięcia"
         }
       },
+      "adjust_invested": {
+        "title": "Zmień kwotę zainwestowaną",
+        "description": "Obecna kwota zainwestowana: {current}",
+        "data": {
+          "operation": "Operacja",
+          "amount": "Kwota"
+        }
+      },
       "edit_valor": {
         "title": "Edycja waloru",
         "data": {
@@ -82,7 +91,8 @@
       "invalid_name": "Podaj nazwę portfela.",
       "invalid_symbol": "Podaj poprawny symbol Yahoo Finance.",
       "symbol_exists": "Ten symbol znajduje się już w portfelu.",
-      "target_sum_exceeded": "Suma udziałów docelowych przekroczy 100%."
+      "target_sum_exceeded": "Suma udziałów docelowych przekroczy 100%.",
+      "invested_negative": "Wypłata spowodowałaby ujemną kwotę zainwestowaną."
     },
     "abort": {
       "no_valors": "Portfel nie ma jeszcze żadnych walorów."
