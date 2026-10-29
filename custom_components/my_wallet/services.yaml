@@ -45,3 +45,99 @@ adjust_invested:
           max: 10000000000
           step: 0.01
           mode: box
+adjust_cash:
+  name: Adjust free cash
+  description: >-
+    Update the tracked free cash of a wallet via a deposit (add),
+    a withdrawal (subtract) or by setting an exact value.
+    The change is stored in the wallet configuration.
+  fields:
+    entity:
+      name: Wallet
+      description: Any sensor of the wallet whose free cash should be changed.
+      required: true
+      selector:
+        entity:
+          integration: my_wallet
+          domain: sensor
+    operation:
+      name: Operation
+      description: "deposit: add the amount, withdraw: subtract it, set: replace the value."
+      required: true
+      selector:
+        select:
+          options:
+            - label: Deposit (add)
+              value: deposit
+            - label: Withdraw (subtract)
+              value: withdraw
+            - label: Set exact value
+              value: set
+    amount:
+      name: Amount
+      description: Amount in the wallet's base currency (must be non-negative).
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 10000000000
+          step: 0.01
+          mode: box
+trade:
+  name: Trade valor
+  description: >-
+    Buy or sell a quantity of a valor. The quantity is rounded to the
+    wallet's rebalance precision. The transaction value (quantity x unit
+    price) is subtracted from (buy) or added to (sell) the tracked free
+    cash. Without an explicit unit price the latest live quote (converted
+    to the base currency) is used. Requires the valor to exist in the
+    wallet; cash changes require cash tracking to be enabled.
+  fields:
+    entity:
+      name: Wallet
+      description: Any sensor of the wallet the trade belongs to.
+      required: true
+      selector:
+        entity:
+          integration: my_wallet
+          domain: sensor
+    operation:
+      name: Operation
+      description: "buy: add units and subtract the value from free cash, sell: remove units and add the value to free cash."
+      required: true
+      selector:
+        select:
+          options:
+            - label: Buy
+              value: buy
+            - label: Sell
+              value: sell
+    symbol:
+      name: Symbol
+      description: Yahoo Finance symbol of the valor to trade (must already be in the wallet).
+      required: true
+      selector:
+        text
+    quantity:
+      name: Quantity
+      description: Units to buy or sell; rounded to the wallet's rebalance precision.
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 1000000000
+          step: 0.0001
+          mode: box
+    unit_price:
+      name: Unit price (optional)
+      description: >-
+        Price per unit in the wallet's base currency. When omitted, the latest
+        live quote (converted with the FX rate) is used.
+      required: false
+      advanced: true
+      selector:
+        number:
+          min: 0
+          max: 10000000000
+          step: 0.0001
+          mode: box
