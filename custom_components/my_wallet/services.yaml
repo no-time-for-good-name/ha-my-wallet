@@ -126,7 +126,7 @@ trade:
         number:
           min: 0
           max: 1000000000
-          step: 0.0001
+          step: 0.01
           mode: box
     unit_price:
       name: Unit price (optional)
@@ -139,5 +139,5 @@ trade:
         number:
           min: 0
           max: 10000000000
-          step: 0.0001
+          step: 0.01
           mode: box
