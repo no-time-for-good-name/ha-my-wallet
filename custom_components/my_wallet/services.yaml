@@ -117,7 +117,7 @@ trade:
       description: Yahoo Finance symbol of the valor to trade (must already be in the wallet).
       required: true
       selector:
-        text
+        text: null
     quantity:
       name: Quantity
       description: Units to buy or sell; rounded to the wallet's rebalance precision.
