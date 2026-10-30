@@ -9,7 +9,8 @@
           "base_currency": "Základní měna (celková hodnota peněženky se zobrazuje v této měně)",
           "scan_interval": "Interval aktualizace (minuty)",
           "rebalance_precision": "Přesnost rebalancování (desetinná místa pro jednotky rebalancování: 0 = pouze celé jednotky, 1-3 = povoleny zlomkové jednotky)",
-          "invested_amount": "Investovaná částka (volitelné, v základní měně; umožňuje sledování zisku)"
+          "invested_amount": "Investovaná částka (volitelné, v základní měně; umožňuje sledování zisku)",
+          "cash_amount": "Volné prostředky (volitelné, v základní měně; sledované samostatně, vymažte pro vypnutí)"
         }
       },
       "valor": {
@@ -35,11 +36,13 @@
       "init": {
         "title": "Spravovat peněženku",
         "menu_options": {
-          "settings": "Nastavení peněženky (název, měna, interval, investovaná částka)",
+          "settings": "Nastavení peněženky (název, měna, interval, investovaná částka, volné prostředky)",
           "add_valor": "Přidat instrument",
           "remove_valor": "Odebrat instrument",
           "edit_valor": "Upravit instrument (množství, cílový podíl)",
-          "adjust_invested": "Upravit investovanou částku (vklad, výběr)"
+          "adjust_invested": "Upravit investovanou částku (vklad, výběr)",
+          "adjust_cash": "Upravit volné prostředky (vklad, výběr)",
+          "trade": "Koupit nebo prodat instrument"
         }
       },
       "settings": {
@@ -49,7 +52,8 @@
           "base_currency": "Základní měna",
           "scan_interval": "Interval aktualizace (minuty)",
           "rebalance_precision": "Přesnost rebalancování (desetinná místa pro jednotky rebalancování: 0 = pouze celé jednotky, 1-3 = povoleny zlomkové jednotky)",
-          "invested_amount": "Investovaná částka (volitelné, v základní měně; vymažte pro vypnutí sledování zisku)"
+          "invested_amount": "Investovaná částka (volitelné, v základní měně; vymažte pro vypnutí sledování zisku)",
+          "cash_amount": "Volné prostředky (volitelné, v základní měně; sledované samostatně, vymažte pro vypnutí)"
         }
       },
       "add_valor": {
@@ -74,6 +78,24 @@
           "amount": "Částka"
         }
       },
+      "adjust_cash": {
+        "title": "Upravit volné prostředky",
+        "description": "Aktuální volné prostředky: {current}",
+        "data": {
+          "operation": "Operace",
+          "amount": "Částka"
+        }
+      },
+      "trade": {
+        "title": "Koupit nebo prodat instrument",
+        "description": "Volné prostředky: {cash}. Hodnota obchodu se odečte od (nákup) nebo přičte k (prodej) volným prostředkům.",
+        "data": {
+          "operation": "Operace",
+          "symbol": "Instrument",
+          "quantity": "Množství (jednotky)",
+          "unit_price": "Cena za jednotku (volitelné; prázdné = aktuální kurz)"
+        }
+      },
       "edit_valor": {
         "title": "Úprava instrumentu",
         "data": {
@@ -94,7 +116,11 @@
       "invalid_symbol": "Zadejte platný symbol Yahoo Finance.",
       "symbol_exists": "Tento symbol se již v peněžence nachází.",
       "target_sum_exceeded": "Součet cílových podílů by překročil 100 %.",
-      "invested_negative": "Výběr by vedl k záporné investované částce."
+      "invested_negative": "Výběr by vedl k záporné investované částce.",
+      "cash_negative": "Výběr by vedl k záporným volným prostředkům.",
+      "quantity_too_small": "Množství se zaokrouhlí na nulu při přesnosti rebalancování peněženky.",
+      "not_enough_units": "Nedostatek jednotek k prodeji tohoto množství.",
+      "unit_price_required": "Aktuální kurz není k dispozici; zadejte cenu za jednotku."
     },
     "abort": {
       "no_valors": "Peněženka zatím neobsahuje žádné instrumenty."
@@ -110,6 +136,9 @@
       },
       "wallet_invested": {
         "name": "Investováno"
+      },
+      "wallet_cash": {
+        "name": "Volné prostředky"
       },
       "wallet_profit": {
         "name": "Zisk"
@@ -142,6 +171,50 @@
         "amount": {
           "name": "Částka",
           "description": "Částka v základní měně peněženky (nesmí být záporná)."
+        }
+      }
+    },
+    "adjust_cash": {
+      "name": "Upravit volné prostředky",
+      "description": "Aktualizovat sledované volné prostředky peněženky vkladem (přidat), výběrem (odečíst) nebo nastavením přesné hodnoty. Změna se uloží do konfigurace peněženky.",
+      "fields": {
+        "entity": {
+          "name": "Peněženka",
+          "description": "Libovolný senzor peněženky, jejíž volné prostředky se mají změnit."
+        },
+        "operation": {
+          "name": "Operace",
+          "description": "deposit: přidat částku, withdraw: odečíst, set: nastavit přesnou hodnotu."
+        },
+        "amount": {
+          "name": "Částka",
+          "description": "Částka v základní měně peněženky (nesmí být záporná)."
+        }
+      }
+    },
+    "trade": {
+      "name": "Obchodovat s instrumentem",
+      "description": "Koupit nebo prodat zadané množství instrumentu. Hodnota obchodu (množství × cena za jednotku) se odečte od (nákup) nebo přičte k (prodej) sledovaným volným prostředkům. Bez zadané ceny se použije aktuální kurz.",
+      "fields": {
+        "entity": {
+          "name": "Peněženka",
+          "description": "Libovolný senzor peněženky, které se obchod týká."
+        },
+        "operation": {
+          "name": "Operace",
+          "description": "buy: přidat jednotky a odečíst hodnotu od volných prostředků, sell: odebrat jednotky a přičíst hodnotu k volným prostředkům."
+        },
+        "symbol": {
+          "name": "Symbol",
+          "description": "Symbol Yahoo Finance instrumentu (musí již být v peněžence)."
+        },
+        "quantity": {
+          "name": "Množství",
+          "description": "Počet jednotek ke koupi nebo prodeji; zaokrouhleno na přesnost rebalancování peněženky."
+        },
+        "unit_price": {
+          "name": "Cena za jednotku (volitelné)",
+          "description": "Cena za jednotku v základní měně peněženky; bez zadání se použije aktuální kurz."
         }
       }
     }
