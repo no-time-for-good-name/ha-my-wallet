@@ -20,6 +20,7 @@ CONF_INVESTED_AMOUNT: Final = "invested_amount"  # optional, in base currency
 CONF_REBALANCE_PRECISION: Final = "rebalance_precision"  # decimal places, 0-3
 DEFAULT_REBALANCE_PRECISION: Final = 0
 MAX_REBALANCE_PRECISION: Final = 3
+CONF_CASH_AMOUNT: Final = "cash_amount"  # optional, tracked free cash in base currency
 
 # Valor keys
 VALOR_SYMBOL: Final = "symbol"
@@ -35,6 +36,8 @@ MAX_SCAN_INTERVAL: Final = 1440
 # Service names
 SERVICE_REFRESH: Final = "refresh"
 SERVICE_ADJUST_INVESTED: Final = "adjust_invested"
+SERVICE_ADJUST_CASH: Final = "adjust_cash"
+SERVICE_TRADE: Final = "trade"
 
 # Service fields / operations for adjust_invested
 ATTR_ENTRY: Final = "entry"  # sensor entity of the wallet
@@ -42,6 +45,14 @@ ATTR_OPERATION: Final = "operation"
 OPERATION_DEPOSIT: Final = "deposit"  # add to the invested amount
 OPERATION_WITHDRAW: Final = "withdraw"  # subtract from the invested amount
 OPERATION_SET: Final = "set"  # replace the invested amount with a fixed value
+
+# Service fields / operations for adjust_cash and trade
+OPERATION_BUY: Final = "buy"
+OPERATION_SELL: Final = "sell"
+ATTR_QUANTITY: Final = "quantity"  # units to buy/sell (trade)
+ATTR_CASH_CHANGED: Final = "cash_changed"  # result attribute
+ATTR_QUANTITY_EXECUTED: Final = "quantity_executed"  # result attribute
+ATTR_CASH: Final = "cash"
 
 # Common currencies offered in the config flow
 COMMON_CURRENCIES: Final = [

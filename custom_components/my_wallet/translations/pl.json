@@ -9,7 +9,8 @@
           "base_currency": "Waluta bazowa (wartość portfela prezentowana w tej walucie)",
           "scan_interval": "Częstotliwość aktualizacji (minuty)",
           "rebalance_precision": "Precyzja rebalansu (miejsca dziesiętne dla jednostek rebalansu: 0 = tylko całe jednostki, 1-3 = dozwolone jednostki ułamkowe)",
-          "invested_amount": "Kwota zainwestowana (opcjonalnie, w walucie bazowej; umożliwia śledzenie zysku)"
+          "invested_amount": "Kwota zainwestowana (opcjonalnie, w walucie bazowej; umożliwia śledzenie zysku)",
+          "cash_amount": "Wolne środki (opcjonalnie, w walucie bazowej; śledzone osobno, wyczyść, aby wyłączyć)"
         }
       },
       "valor": {
@@ -35,11 +36,13 @@
       "init": {
         "title": "Zarządzaj portfelem",
         "menu_options": {
-          "settings": "Ustawienia portfela (nazwa, waluta, częstotliwość, kwota zainwestowana)",
+          "settings": "Ustawienia portfela (nazwa, waluta, częstotliwość, kwota zainwestowana, wolne środki)",
           "add_valor": "Dodaj walor",
           "remove_valor": "Usuń walor",
           "edit_valor": "Edytuj walor (ilość, udział docelowy)",
-          "adjust_invested": "Zmień kwotę zainwestowaną (wpłata, wypłata)"
+          "adjust_invested": "Zmień kwotę zainwestowaną (wpłata, wypłata)",
+          "adjust_cash": "Zmień wolne środki (wpłata, wypłata)",
+          "trade": "Kup lub sprzedaj walor"
         }
       },
       "settings": {
@@ -49,7 +52,8 @@
           "base_currency": "Waluta bazowa",
           "scan_interval": "Częstotliwość aktualizacji (minuty)",
           "rebalance_precision": "Precyzja rebalansu (miejsca dziesiętne dla jednostek rebalansu: 0 = tylko całe jednostki, 1-3 = dozwolone jednostki ułamkowe)",
-          "invested_amount": "Kwota zainwestowana (opcjonalnie, w walucie bazowej; wyczyść, aby wyłączyć śledzenie zysku)"
+          "invested_amount": "Kwota zainwestowana (opcjonalnie, w walucie bazowej; wyczyść, aby wyłączyć śledzenie zysku)",
+          "cash_amount": "Wolne środki (opcjonalnie, w walucie bazowej; śledzone osobno, wyczyść, aby wyłączyć)"
         }
       },
       "add_valor": {
@@ -74,6 +78,24 @@
           "amount": "Kwota"
         }
       },
+      "adjust_cash": {
+        "title": "Zmień wolne środki",
+        "description": "Obecne wolne środki: {current}",
+        "data": {
+          "operation": "Operacja",
+          "amount": "Kwota"
+        }
+      },
+      "trade": {
+        "title": "Kup lub sprzedaj walor",
+        "description": "Wolne środki: {cash}. Wartość transakcji jest odejmowana od (kupno) lub dodawana do (sprzedaż) wolnych środków.",
+        "data": {
+          "operation": "Operacja",
+          "symbol": "Walor",
+          "quantity": "Ilość (jednostki)",
+          "unit_price": "Cena jednostkowa (opcjonalnie; puste = aktualny kurs)"
+        }
+      },
       "edit_valor": {
         "title": "Edycja waloru",
         "data": {
@@ -94,7 +116,11 @@
       "invalid_symbol": "Podaj poprawny symbol Yahoo Finance.",
       "symbol_exists": "Ten symbol znajduje się już w portfelu.",
       "target_sum_exceeded": "Suma udziałów docelowych przekroczy 100%.",
-      "invested_negative": "Wypłata spowodowałaby ujemną kwotę zainwestowaną."
+      "invested_negative": "Wypłata spowodowałaby ujemną kwotę zainwestowaną.",
+      "cash_negative": "Wypłata spowodowałaby ujemne wolne środki.",
+      "quantity_too_small": "Ilość zaokrągla się do zera przy precyzji rebalansu portfela.",
+      "not_enough_units": "Za mało jednostek, aby sprzedać taką ilość.",
+      "unit_price_required": "Brak aktualnego kursu; podaj cenę jednostkową."
     },
     "abort": {
       "no_valors": "Portfel nie ma jeszcze żadnych walorów."
@@ -110,6 +136,9 @@
       },
       "wallet_invested": {
         "name": "Zainwestowane"
+      },
+      "wallet_cash": {
+        "name": "Wolne środki"
       },
       "wallet_profit": {
         "name": "Zysk"
@@ -142,6 +171,50 @@
         "amount": {
           "name": "Kwota",
           "description": "Kwota w walucie bazowej portfela (nie może być ujemna)."
+        }
+      }
+    },
+    "adjust_cash": {
+      "name": "Zmień wolne środki",
+      "description": "Zaktualizuj śledzone wolne środki portfela poprzez wpłatę (dodanie), wypłatę (odjęcie) lub ustawienie dokładnej wartości. Zmiana zostaje zapisana w konfiguracji portfela.",
+      "fields": {
+        "entity": {
+          "name": "Portfel",
+          "description": "Dowolny sensor portfela, którego wolne środki mają zostać zmienione."
+        },
+        "operation": {
+          "name": "Operacja",
+          "description": "deposit: dodaj kwotę, withdraw: odejmij, set: ustaw dokładną wartość."
+        },
+        "amount": {
+          "name": "Kwota",
+          "description": "Kwota w walucie bazowej portfela (nie może być ujemna)."
+        }
+      }
+    },
+    "trade": {
+      "name": "Transakcja na walorze",
+      "description": "Kup lub sprzedaj podaną ilość waloru. Wartość transakcji (ilość × cena jednostkowa) jest odejmowana od (kupno) lub dodawana do (sprzedaż) śledzonych wolnych środków. Bez podanej ceny użyty zostanie aktualny kurs.",
+      "fields": {
+        "entity": {
+          "name": "Portfel",
+          "description": "Dowolny sensor portfela, którego dotyczy transakcja."
+        },
+        "operation": {
+          "name": "Operacja",
+          "description": "buy: dodaj jednostki i odejmij wartość od wolnych środków, sell: usuń jednostki i dodaj wartość do wolnych środków."
+        },
+        "symbol": {
+          "name": "Symbol",
+          "description": "Symbol Yahoo Finance waloru (musi już znajdować się w portfelu)."
+        },
+        "quantity": {
+          "name": "Ilość",
+          "description": "Liczba jednostek do kupna lub sprzedaży; zaokrąglana do precyzji rebalansu portfela."
+        },
+        "unit_price": {
+          "name": "Cena jednostkowa (opcjonalnie)",
+          "description": "Cena za jednostkę w walucie bazowej portfela; bez podania użyty zostanie aktualny kurs."
         }
       }
     }

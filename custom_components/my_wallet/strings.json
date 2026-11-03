@@ -9,7 +9,8 @@
           "base_currency": "Base currency (wallet total is shown in this currency)",
           "scan_interval": "Update interval (minutes)",
           "rebalance_precision": "Rebalance precision (decimal places for rebalance units: 0 = whole units only, 1-3 = fractional units allowed)",
-          "invested_amount": "Invested amount (optional, in the base currency; enables profit tracking)"
+          "invested_amount": "Invested amount (optional, in the base currency; enables profit tracking)",
+          "cash_amount": "Free cash (optional, in the base currency; tracked separately, set empty to disable)"
         }
       },
       "valor": {
@@ -35,11 +36,13 @@
       "init": {
         "title": "Manage wallet",
         "menu_options": {
-          "settings": "Edit wallet settings (name, currency, interval, invested amount)",
+          "settings": "Edit wallet settings (name, currency, interval, invested amount, free cash)",
           "add_valor": "Add a valor",
           "remove_valor": "Remove a valor",
           "edit_valor": "Edit a valor (amount, target share)",
-          "adjust_invested": "Adjust the invested amount (deposit, withdrawal)"
+          "adjust_invested": "Adjust the invested amount (deposit, withdrawal)",
+          "adjust_cash": "Adjust the free cash (deposit, withdrawal)",
+          "trade": "Buy or sell a valor"
         }
       },
       "settings": {
@@ -49,7 +52,8 @@
           "base_currency": "Base currency",
           "scan_interval": "Update interval (minutes)",
           "rebalance_precision": "Rebalance precision (decimal places for rebalance units: 0 = whole units only, 1-3 = fractional units allowed)",
-          "invested_amount": "Invested amount (optional, in the base currency; set empty to disable profit tracking)"
+          "invested_amount": "Invested amount (optional, in the base currency; set empty to disable profit tracking)",
+          "cash_amount": "Free cash (optional, in the base currency; tracked separately, set empty to disable)"
         }
       },
       "add_valor": {
@@ -74,6 +78,24 @@
           "amount": "Amount"
         }
       },
+      "adjust_cash": {
+        "title": "Adjust free cash",
+        "description": "Current free cash: {current}",
+        "data": {
+          "operation": "Operation",
+          "amount": "Amount"
+        }
+      },
+      "trade": {
+        "title": "Buy or sell a valor",
+        "description": "Free cash: {cash}. The transaction value is subtracted from (buy) or added to (sell) the free cash.",
+        "data": {
+          "operation": "Operation",
+          "symbol": "Valor",
+          "quantity": "Quantity (units)",
+          "unit_price": "Unit price (optional; empty = latest live quote)"
+        }
+      },
       "edit_valor": {
         "title": "Edit a valor",
         "data": {
@@ -94,7 +116,11 @@
       "invalid_symbol": "Please enter a valid Yahoo Finance symbol.",
       "symbol_exists": "This symbol is already in the wallet.",
       "target_sum_exceeded": "The sum of target shares would exceed 100%.",
-      "invested_negative": "The withdrawal would make the invested amount negative."
+      "invested_negative": "The withdrawal would make the invested amount negative.",
+      "cash_negative": "The withdrawal would make the free cash negative.",
+      "quantity_too_small": "The quantity rounds to zero at the wallet's rebalance precision.",
+      "not_enough_units": "Not enough units held to sell this quantity.",
+      "unit_price_required": "No live quote is available; enter the unit price."
     },
     "abort": {
       "no_valors": "The wallet has no valors yet."
@@ -110,6 +136,9 @@
       },
       "wallet_invested": {
         "name": "Invested"
+      },
+      "wallet_cash": {
+        "name": "Free cash"
       },
       "wallet_profit": {
         "name": "Profit"
@@ -142,6 +171,50 @@
         "amount": {
           "name": "Amount",
           "description": "Amount in the wallet's base currency (must be non-negative)."
+        }
+      }
+    },
+    "adjust_cash": {
+      "name": "Adjust free cash",
+      "description": "Update the tracked free cash of a wallet via a deposit (add), a withdrawal (subtract) or by setting an exact value. The change is stored in the wallet configuration.",
+      "fields": {
+        "entity": {
+          "name": "Wallet",
+          "description": "Any sensor of the wallet whose free cash should be changed."
+        },
+        "operation": {
+          "name": "Operation",
+          "description": "deposit: add the amount, withdraw: subtract it, set: replace the value."
+        },
+        "amount": {
+          "name": "Amount",
+          "description": "Amount in the wallet's base currency (must be non-negative)."
+        }
+      }
+    },
+    "trade": {
+      "name": "Trade valor",
+      "description": "Buy or sell a quantity of a valor. The transaction value (quantity × unit price) is subtracted from (buy) or added to (sell) the tracked free cash. Without an explicit unit price the latest live quote is used.",
+      "fields": {
+        "entity": {
+          "name": "Wallet",
+          "description": "Any sensor of the wallet the trade belongs to."
+        },
+        "operation": {
+          "name": "Operation",
+          "description": "buy: add units and subtract the value from free cash, sell: remove units and add the value to free cash."
+        },
+        "symbol": {
+          "name": "Symbol",
+          "description": "Yahoo Finance symbol of the valor to trade (must already be in the wallet)."
+        },
+        "quantity": {
+          "name": "Quantity",
+          "description": "Units to buy or sell; rounded to the wallet's rebalance precision."
+        },
+        "unit_price": {
+          "name": "Unit price (optional)",
+          "description": "Price per unit in the wallet's base currency; when omitted the latest live quote is used."
         }
       }
     }

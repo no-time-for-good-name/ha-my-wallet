@@ -14,8 +14,12 @@ from homeassistant.helpers import selector
 from .const import (
     ATTR_AMOUNT,
     ATTR_OPERATION,
+    ATTR_QUANTITY,
+    ATTR_SYMBOL,
+    ATTR_UNIT_PRICE,
     COMMON_CURRENCIES,
     CONF_BASE_CURRENCY,
+    CONF_CASH_AMOUNT,
     CONF_INVESTED_AMOUNT,
     CONF_REBALANCE_PRECISION,
     CONF_SCAN_INTERVAL,
@@ -28,7 +32,9 @@ from .const import (
     MAX_REBALANCE_PRECISION,
     MAX_SCAN_INTERVAL,
     MIN_SCAN_INTERVAL,
+    OPERATION_BUY,
     OPERATION_DEPOSIT,
+    OPERATION_SELL,
     OPERATION_SET,
     OPERATION_WITHDRAW,
     TARGET_SHARE_SUM_TOLERANCE,
@@ -36,6 +42,7 @@ from .const import (
     VALOR_SYMBOL,
     VALOR_TARGET_SHARE,
 )
+from .coordinator import WalletCoordinator
 
 _CURRENCY_SELECTOR = selector.SelectSelector(
     selector.SelectSelectorConfig(
@@ -116,6 +123,14 @@ def _normalize_precision(value: Any) -> int:
     return min(MAX_REBALANCE_PRECISION, max(0, int(value)))
 
 
+def _normalize_cash(value: Any) -> float | None:
+    """Return a non-negative cash amount or None when tracking is disabled."""
+    if value is None:
+        return None
+    cash = float(value)
+    return cash if cash >= 0 else None
+
+
 def _operation_schema(
     current: float | None = None,
     operation: str | None = None,
@@ -136,6 +151,79 @@ def _operation_schema(
             vol.Required(ATTR_AMOUNT, default=amount): _AMOUNT_SELECTOR,
         }
     )
+
+
+def _cash_operation_schema(
+    current: float | None = None,
+    operation: str | None = None,
+    amount: float | None = None,
+) -> vol.Schema:
+    """Form for adjusting the tracked free cash from the options menu."""
+    return vol.Schema(
+        {
+            vol.Required(
+                ATTR_OPERATION,
+                default=operation or OPERATION_DEPOSIT,
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=[OPERATION_DEPOSIT, OPERATION_WITHDRAW, OPERATION_SET],
+                    mode=selector.SelectSelectorMode.DROPDOWN,
+                )
+            ),
+            vol.Required(ATTR_AMOUNT, default=amount): _AMOUNT_SELECTOR,
+        }
+    )
+
+
+_TRADE_PRECISION_SELECTOR = selector.NumberSelector(
+    selector.NumberSelectorConfig(
+        min=0,
+        max=1_000_000_000,
+        step=0.001,
+        mode=selector.NumberSelectorMode.BOX,
+    )
+)
+
+_TRADE_PRICE_SELECTOR = selector.NumberSelector(
+    selector.NumberSelectorConfig(
+        min=0,
+        max=10_000_000_000,
+        step=0.001,
+        mode=selector.NumberSelectorMode.BOX,
+    )
+)
+
+
+def _trade_schema(
+    valors: Iterable[dict[str, Any]],
+    operation: str | None = None,
+    symbol: str | None = None,
+    quantity: float | None = None,
+    unit_price: float | None = None,
+) -> vol.Schema:
+    """Form for buying / selling a valor from the options menu."""
+    schema: dict[Any, Any] = {
+        vol.Required(
+            ATTR_OPERATION,
+            default=operation or OPERATION_BUY,
+        ): selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=[OPERATION_BUY, OPERATION_SELL],
+                mode=selector.SelectSelectorMode.DROPDOWN,
+            )
+        ),
+        vol.Required(ATTR_SYMBOL, default=symbol): selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=[v[VALOR_SYMBOL] for v in valors],
+                mode=selector.SelectSelectorMode.DROPDOWN,
+            )
+        ),
+        vol.Required(ATTR_QUANTITY, default=quantity): _TRADE_PRECISION_SELECTOR,
+        vol.Optional(
+            ATTR_UNIT_PRICE, description={"suggested_value": unit_price}
+        ): vol.Any(None, _TRADE_PRICE_SELECTOR),
+    }
+    return vol.Schema(schema)
 
 
 def _normalize_target_share(value: Any) -> float | None:
@@ -162,6 +250,7 @@ def _settings_schema(
     interval: int = DEFAULT_SCAN_INTERVAL,
     invested: float | None = None,
     precision: int = DEFAULT_REBALANCE_PRECISION,
+    cash: float | None = None,
 ) -> vol.Schema:
     return vol.Schema(
         {
@@ -176,6 +265,10 @@ def _settings_schema(
             # number selector would reject with "expected float".
             vol.Optional(
                 CONF_INVESTED_AMOUNT, description={"suggested_value": invested}
+            ): vol.Any(None, _AMOUNT_SELECTOR),
+            # Same pattern: an empty field disables cash tracking entirely.
+            vol.Optional(
+                CONF_CASH_AMOUNT, description={"suggested_value": cash}
             ): vol.Any(None, _AMOUNT_SELECTOR),
         }
     )
@@ -193,6 +286,7 @@ class MyWalletConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._interval: int = DEFAULT_SCAN_INTERVAL
         self._invested: float | None = None
         self._precision: int = DEFAULT_REBALANCE_PRECISION
+        self._cash: float | None = None
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Step 1: basic wallet settings."""
@@ -209,11 +303,12 @@ class MyWalletConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 self._precision = _normalize_precision(
                     user_input.get(CONF_REBALANCE_PRECISION)
                 )
+                self._cash = _normalize_cash(user_input.get(CONF_CASH_AMOUNT))
                 return await self.async_step_valor()
         return self.async_show_form(
             step_id="user",
             data_schema=_settings_schema(
-                self._name, self._currency, self._interval, self._invested, self._precision
+                self._name, self._currency, self._interval, self._invested, self._precision, self._cash
             ),
             errors=errors,
         )
@@ -264,6 +359,8 @@ class MyWalletConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         }
         if self._invested is not None:
             data[CONF_INVESTED_AMOUNT] = self._invested
+        if self._cash is not None:
+            data[CONF_CASH_AMOUNT] = self._cash
         return self.async_create_entry(title=self._name or "Wallet", data=data)
 
     @staticmethod
@@ -284,7 +381,15 @@ class MyWalletOptionsFlow(config_entries.OptionsFlowWithConfigEntry):
         self._edit_symbol = None
         return self.async_show_menu(
             step_id="init",
-            menu_options=["settings", "add_valor", "edit_valor", "remove_valor", "adjust_invested"],
+            menu_options=[
+                "settings",
+                "add_valor",
+                "edit_valor",
+                "remove_valor",
+                "adjust_invested",
+                "adjust_cash",
+                "trade",
+            ],
         )
 
     async def async_step_adjust_invested(self, user_input: dict[str, Any] | None = None) -> FlowResult:
@@ -313,6 +418,126 @@ class MyWalletOptionsFlow(config_entries.OptionsFlowWithConfigEntry):
             data_schema=_operation_schema(current),
             errors=errors,
             description_placeholders={"current": f"{current:g}"},
+        )
+
+    async def async_step_adjust_cash(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+        """Adjust the tracked free cash (deposit / withdraw / set)."""
+        errors: dict[str, str] = {}
+        current = self.config_entry.data.get(CONF_CASH_AMOUNT)
+        current = float(current) if current is not None else 0.0
+        if user_input is not None:
+            operation: str = user_input[ATTR_OPERATION]
+            amount = float(user_input[ATTR_AMOUNT])
+            if operation == OPERATION_SET:
+                new_value = amount
+            elif operation == OPERATION_DEPOSIT:
+                new_value = current + amount
+            else:  # OPERATION_WITHDRAW
+                new_value = current - amount
+                if new_value < 0:
+                    errors[ATTR_AMOUNT] = "cash_negative"
+            if not errors:
+                return await self._save(
+                    self._valors(),
+                    **{CONF_CASH_AMOUNT: round(new_value, 2)},
+                )
+        return self.async_show_form(
+            step_id="adjust_cash",
+            data_schema=_cash_operation_schema(current),
+            errors=errors,
+            description_placeholders={"current": f"{current:g}"},
+        )
+
+    async def async_step_trade(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+        """Buy or sell a valor; the free cash follows the trade."""
+        errors: dict[str, str] = {}
+        valors = self._valors()
+        if not valors:
+            return self.async_abort(reason="no_valors")
+        coordinator: WalletCoordinator | None = getattr(
+            self.config_entry, "runtime_data", None
+        )
+        if user_input is not None:
+            symbol: str = user_input[ATTR_SYMBOL]
+            operation: str = user_input[ATTR_OPERATION]
+            quantity = float(user_input[ATTR_QUANTITY])
+            precision = _normalize_precision(
+                self.config_entry.data.get(CONF_REBALANCE_PRECISION)
+            )
+            quantity = round(quantity, precision)
+            valor_entry = next(
+                (v for v in valors if v[VALOR_SYMBOL] == symbol), None
+            )
+            held = float(valor_entry[VALOR_AMOUNT]) if valor_entry else 0.0
+            if quantity <= 0:
+                errors[ATTR_QUANTITY] = "quantity_too_small"
+            elif operation == OPERATION_SELL and quantity > held:
+                errors[ATTR_QUANTITY] = "not_enough_units"
+            else:
+                new_amount = (
+                    held + quantity if operation == OPERATION_BUY else held - quantity
+                )
+                new_valors = [
+                    dict(v, **{VALOR_AMOUNT: new_amount})
+                    if v[VALOR_SYMBOL] == symbol
+                    else v
+                    for v in valors
+                ]
+                extra: dict[str, Any] = {CONF_VALORS: new_valors}
+                cash = self.config_entry.data.get(CONF_CASH_AMOUNT)
+                unit_price = user_input.get(ATTR_UNIT_PRICE)
+                if cash is not None:
+                    if unit_price is not None:
+                        amount_cash = round(quantity * float(unit_price), 2)
+                    else:
+                        valor_data = (
+                            coordinator.data.valors.get(symbol)
+                            if coordinator is not None and coordinator.data
+                            else None
+                        )
+                        if (
+                            valor_data is None
+                            or valor_data.quote is None
+                            or not valor_data.quote.price
+                            or valor_data.fx_rate is None
+                        ):
+                            errors[ATTR_UNIT_PRICE] = "unit_price_required"
+                            amount_cash = 0.0
+                        else:
+                            amount_cash = round(
+                                quantity
+                                * float(valor_data.quote.price)
+                                * float(valor_data.fx_rate),
+                                2,
+                            )
+                    if not errors:
+                        new_cash = (
+                            float(cash) - amount_cash
+                            if operation == OPERATION_BUY
+                            else float(cash) + amount_cash
+                        )
+                        if new_cash < 0:
+                            errors[ATTR_AMOUNT] = "cash_negative"
+                        else:
+                            extra[CONF_CASH_AMOUNT] = round(new_cash, 2)
+                if not errors:
+                    self.hass.config_entries.async_update_entry(
+                        self.config_entry,
+                        data={**self.config_entry.data, **extra},
+                    )
+                    if coordinator is not None:
+                        self.hass.async_create_task(
+                            coordinator.async_request_refresh()
+                        )
+                    return self.async_create_entry(title="", data={})
+        current_cash = self.config_entry.data.get(CONF_CASH_AMOUNT)
+        return self.async_show_form(
+            step_id="trade",
+            data_schema=_trade_schema(valors),
+            errors=errors,
+            description_placeholders={
+                "cash": f"{float(current_cash):g}" if current_cash is not None else "—"
+            },
         )
 
     def _valors(self) -> list[dict[str, Any]]:
@@ -345,6 +570,10 @@ class MyWalletOptionsFlow(config_entries.OptionsFlowWithConfigEntry):
                         CONF_INVESTED_AMOUNT: _normalize_invested(
                             user_input.get(CONF_INVESTED_AMOUNT)
                         ),
+                        # None clears a previously set amount and disables cash tracking.
+                        CONF_CASH_AMOUNT: _normalize_cash(
+                            user_input.get(CONF_CASH_AMOUNT)
+                        ),
                     },
                 )
         data = self.config_entry.data
@@ -356,6 +585,7 @@ class MyWalletOptionsFlow(config_entries.OptionsFlowWithConfigEntry):
                 data.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
                 data.get(CONF_INVESTED_AMOUNT),
                 data.get(CONF_REBALANCE_PRECISION, DEFAULT_REBALANCE_PRECISION),
+                data.get(CONF_CASH_AMOUNT),
             ),
             errors=errors,
         )

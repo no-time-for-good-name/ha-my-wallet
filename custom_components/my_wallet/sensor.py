@@ -22,12 +22,14 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from . import MyWalletConfigEntry
 from .const import (
     ATTR_AMOUNT,
+    ATTR_CASH,
     ATTR_DAY_CHANGE,
     ATTR_DAY_CHANGE_PCT,
     ATTR_FX_RATE,
     ATTR_INVESTED,
     ATTR_OPERATION,
     ATTR_PREVIOUS_CLOSE,
+    ATTR_QUANTITY,
     ATTR_QUOTE_CURRENCY,
     ATTR_REBALANCE_AMOUNT,
     ATTR_REBALANCE_PRECISION,
@@ -40,15 +42,24 @@ from .const import (
     ATTR_TOTAL,
     ATTR_UNIT_PRICE,
     ATTR_VALUE,
+    CONF_CASH_AMOUNT,
     CONF_INVESTED_AMOUNT,
+    CONF_REBALANCE_PRECISION,
     CONF_VALORS,
     CONF_WALLET_NAME,
     DOMAIN,
+    DEFAULT_REBALANCE_PRECISION,
+    MAX_REBALANCE_PRECISION,
+    OPERATION_BUY,
     OPERATION_DEPOSIT,
+    OPERATION_SELL,
     OPERATION_SET,
     OPERATION_WITHDRAW,
+    SERVICE_ADJUST_CASH,
     SERVICE_ADJUST_INVESTED,
     SERVICE_REFRESH,
+    SERVICE_TRADE,
+    VALOR_AMOUNT,
     VALOR_SYMBOL,
 )
 from .coordinator import ValorData, WalletCoordinator, WalletData
@@ -62,6 +73,65 @@ def _invested_amount(entry: ConfigEntry) -> float | None:
     if value is None or float(value) <= 0:
         return None
     return float(value)
+
+
+def _cash_amount(entry: ConfigEntry) -> float | None:
+    """Tracked free cash from the entry, or None when cash tracking is off."""
+    value = entry.data.get(CONF_CASH_AMOUNT)
+    if value is None:
+        return None
+    return max(0.0, float(value))
+
+
+def _resolve_entry(hass: HomeAssistant, entity_id: str) -> ConfigEntry:
+    """Config entry of the wallet that owns the given sensor entity."""
+    registry = er.async_get(hass)
+    entity_entry = registry.async_get(entity_id)
+    resolved_entry_id = (
+        entity_entry.config_entry_id
+        if entity_entry and entity_entry.config_entry_id
+        else None
+    )
+    if resolved_entry_id is None:
+        raise HomeAssistantError(
+            f"{entity_id} does not belong to a {DOMAIN} config entry."
+        )
+    target_entry = hass.config_entries.async_get_entry(resolved_entry_id)
+    if target_entry is None or target_entry.domain != DOMAIN:
+        raise HomeAssistantError(f"Unknown {DOMAIN} config entry for {entity_id}.")
+    return target_entry
+
+
+def _update_entry_data(
+    hass: HomeAssistant, entry: ConfigEntry, **changes: float
+) -> None:
+    """Persist value changes in the entry; the update listener reloads the wallet."""
+    data = dict(entry.data)
+    data.update(changes)
+    hass.config_entries.async_update_entry(entry, data=data)
+
+
+def _unit_price_from_call(
+    service: ServiceCall, coordinator: WalletCoordinator, symbol: str
+) -> float:
+    """Explicit unit price from the call, or the latest available quote."""
+    explicit = service.data.get(ATTR_UNIT_PRICE)
+    if explicit is not None:
+        price = float(explicit)
+        if price <= 0:
+            raise HomeAssistantError("Unit price must be positive.")
+        return price
+    valor = coordinator.data.valors.get(symbol)
+    if (
+        valor is None
+        or valor.quote is None
+        or not valor.quote.price
+        or valor.fx_rate is None
+    ):
+        raise HomeAssistantError(
+            f"No live quote available for {symbol}; pass {ATTR_UNIT_PRICE} explicitly."
+        )
+    return float(valor.quote.price) * float(valor.fx_rate)
 
 
 def _share(valor: ValorData, total: float | None) -> float | None:
@@ -82,6 +152,7 @@ async def async_setup_entry(
     entities: list[SensorEntity] = [
         WalletTotalSensor(coordinator, entry),
         WalletInvestedSensor(coordinator, entry),
+        WalletCashSensor(coordinator, entry),
         WalletProfitSensor(coordinator, entry),
         WalletProfitPctSensor(coordinator, entry),
     ]
@@ -111,22 +182,7 @@ async def async_setup_entry(
         @callback
         async def _async_adjust_invested(service: ServiceCall) -> None:
             entity_id: str = service.data[ATTR_ENTITY_ID]
-            registry = er.async_get(hass)
-            entity_entry = registry.async_get(entity_id)
-            resolved_entry_id = (
-                entity_entry.config_entry_id
-                if entity_entry and entity_entry.config_entry_id
-                else None
-            )
-            if resolved_entry_id is None:
-                raise HomeAssistantError(
-                    f"{entity_id} does not belong to a {DOMAIN} config entry."
-                )
-            target_entry = hass.config_entries.async_get_entry(resolved_entry_id)
-            if target_entry is None or target_entry.domain != DOMAIN:
-                raise HomeAssistantError(
-                    f"Unknown {DOMAIN} config entry for {entity_id}."
-                )
+            target_entry = _resolve_entry(hass, entity_id)
             operation: str = service.data[ATTR_OPERATION]
             amount = float(service.data[ATTR_AMOUNT])
             current = target_entry.data.get(CONF_INVESTED_AMOUNT)
@@ -142,9 +198,22 @@ async def async_setup_entry(
                         "Withdrawal would make the invested amount negative "
                         f"(current: {current}, withdrawal: {amount})."
                     )
-            data = dict(target_entry.data)
-            data[CONF_INVESTED_AMOUNT] = round(new_value, 2)
-            hass.config_entries.async_update_entry(target_entry, data=data)
+            changes: dict[str, float] = {
+                CONF_INVESTED_AMOUNT: round(new_value, 2)
+            }
+            # Deposits / withdrawals of real money also change the free cash,
+            # when cash tracking is enabled for this wallet.
+            if operation in (OPERATION_DEPOSIT, OPERATION_WITHDRAW):
+                cash = _cash_amount(target_entry)
+                if cash is not None:
+                    new_cash = cash + amount if operation == OPERATION_DEPOSIT else cash - amount
+                    if new_cash < 0:
+                        raise HomeAssistantError(
+                            "Withdrawal would make the free cash negative "
+                            f"(current cash: {cash}, withdrawal: {amount})."
+                        )
+                    changes[CONF_CASH_AMOUNT] = round(new_cash, 2)
+            _update_entry_data(hass, target_entry, **changes)
 
         hass.services.async_register(
             DOMAIN,
@@ -175,6 +244,173 @@ async def async_setup_entry(
             ),
         )
 
+    # my_wallet.adjust_cash: deposit / withdraw / set the tracked free cash.
+    if not hass.services.has_service(DOMAIN, SERVICE_ADJUST_CASH):
+
+        @callback
+        async def _async_adjust_cash(service: ServiceCall) -> None:
+            entity_id: str = service.data[ATTR_ENTITY_ID]
+            target_entry = _resolve_entry(hass, entity_id)
+            operation: str = service.data[ATTR_OPERATION]
+            amount = float(service.data[ATTR_AMOUNT])
+            current = _cash_amount(target_entry) or 0.0
+            if operation == OPERATION_SET:
+                new_value = amount
+            elif operation == OPERATION_DEPOSIT:
+                new_value = current + amount
+            else:  # OPERATION_WITHDRAW
+                new_value = current - amount
+                if new_value < 0:
+                    raise HomeAssistantError(
+                        "Withdrawal would make the free cash negative "
+                        f"(current cash: {current}, withdrawal: {amount})."
+                    )
+            _update_entry_data(
+                hass, target_entry, **{CONF_CASH_AMOUNT: round(new_value, 2)}
+            )
+
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_ADJUST_CASH,
+            _async_adjust_cash,
+            schema=vol.Schema(
+                {
+                    vol.Required(ATTR_ENTITY_ID): selector.EntitySelector(
+                        selector.EntitySelectorConfig(
+                            integration=DOMAIN, domain="sensor"
+                        )
+                    ),
+                    vol.Required(ATTR_OPERATION): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=[OPERATION_DEPOSIT, OPERATION_WITHDRAW, OPERATION_SET],
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                        )
+                    ),
+                    vol.Required(ATTR_AMOUNT): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            min=0,
+                            max=10_000_000_000,
+                            step=0.01,
+                            mode=selector.NumberSelectorMode.BOX,
+                        )
+                    ),
+                }
+            ),
+        )
+
+    # my_wallet.trade: buy / sell a valor by quantity; cash follows the trade.
+    if not hass.services.has_service(DOMAIN, SERVICE_TRADE):
+
+        @callback
+        async def _async_trade(service: ServiceCall) -> None:
+            entity_id: str = service.data[ATTR_ENTITY_ID]
+            target_entry = _resolve_entry(hass, entity_id)
+            coordinator: WalletCoordinator = target_entry.runtime_data
+            operation: str = service.data[ATTR_OPERATION]
+            symbol: str = str(service.data[ATTR_SYMBOL]).strip().upper()
+            quantity = float(service.data[ATTR_QUANTITY])
+            precision = min(
+                MAX_REBALANCE_PRECISION,
+                max(
+                    0,
+                    int(
+                        target_entry.data.get(
+                            CONF_REBALANCE_PRECISION, DEFAULT_REBALANCE_PRECISION
+                        )
+                    ),
+                ),
+            )
+            quantity = round(quantity, precision)
+            if quantity <= 0:
+                raise HomeAssistantError(
+                    f"Quantity rounds to {quantity} at the wallet precision "
+                    f"({precision} decimal places); use a larger quantity."
+                )
+            valor_entry = next(
+                (v for v in target_entry.data.get(CONF_VALORS, [])
+                 if v[VALOR_SYMBOL] == symbol),
+                None,
+            )
+            if valor_entry is None:
+                raise HomeAssistantError(
+                    f"{symbol} is not part of this wallet; add it first."
+                )
+            unit_price = _unit_price_from_call(service, coordinator, symbol)
+            amount = round(quantity * unit_price, 2)
+            cash = _cash_amount(target_entry)
+            new_cash: float | None = None
+            new_amount = float(valor_entry[VALOR_AMOUNT])
+            if operation == OPERATION_BUY:
+                new_amount += quantity
+                if cash is not None:
+                    if cash < amount:
+                        raise HomeAssistantError(
+                            f"Insufficient free cash for buying {quantity} x "
+                            f"{symbol} for {amount} (available: {cash})."
+                        )
+                    new_cash = cash - amount
+            else:  # OPERATION_SELL
+                new_amount -= quantity
+                if new_amount < 0:
+                    raise HomeAssistantError(
+                        f"Cannot sell {quantity} x {symbol}: only "
+                        f"{valor_entry[VALOR_AMOUNT]} held."
+                    )
+                if cash is not None:
+                    new_cash = cash + amount
+            changes: dict[str, Any] = {
+                CONF_VALORS: [
+                    dict(v, **{VALOR_AMOUNT: new_amount})
+                    if v[VALOR_SYMBOL] == symbol
+                    else v
+                    for v in target_entry.data.get(CONF_VALORS, [])
+                ]
+            }
+            if cash is not None and new_cash is not None:
+                changes[CONF_CASH_AMOUNT] = round(new_cash, 2)
+            _update_entry_data(hass, target_entry, **changes)
+            service.async_create_task(
+                coordinator.async_request_refresh()
+            )
+
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_TRADE,
+            _async_trade,
+            schema=vol.Schema(
+                {
+                    vol.Required(ATTR_ENTITY_ID): selector.EntitySelector(
+                        selector.EntitySelectorConfig(
+                            integration=DOMAIN, domain="sensor"
+                        )
+                    ),
+                    vol.Required(ATTR_OPERATION): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=[OPERATION_BUY, OPERATION_SELL],
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                        )
+                    ),
+                    vol.Required(ATTR_SYMBOL): str,
+                    vol.Required(ATTR_QUANTITY): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            min=0,
+                            max=1_000_000_000,
+                            step=0.001,
+                            mode=selector.NumberSelectorMode.BOX,
+                        )
+                    ),
+                    vol.Optional(ATTR_UNIT_PRICE): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            min=0,
+                            max=10_000_000_000,
+                            step=0.001,
+                            mode=selector.NumberSelectorMode.BOX,
+                        )
+                    ),
+                }
+            ),
+        )
+
 
 def _cleanup_orphaned_entities(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Remove registry entries of valors that are no longer configured."""
@@ -186,6 +422,7 @@ def _cleanup_orphaned_entities(hass: HomeAssistant, entry: ConfigEntry) -> None:
         {
             f"{entry.entry_id}_total",
             f"{entry.entry_id}_invested",
+            f"{entry.entry_id}_cash",
             f"{entry.entry_id}_profit",
             f"{entry.entry_id}_profit_pct",
         }
@@ -424,8 +661,31 @@ class WalletInvestedSensor(WalletBaseSensor):
         return _invested_amount(self._entry) is not None
 
 
+class WalletCashSensor(WalletBaseSensor):
+    """Tracked free cash of the wallet, in base currency."""
+
+    _attr_icon = "mdi:cash"
+
+    def __init__(self, coordinator: WalletCoordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator, entry)
+        self._attr_unique_id = f"{entry.entry_id}_cash"
+        self._attr_translation_key = "wallet_cash"
+
+    @property
+    def native_value(self) -> float | None:
+        return _cash_amount(self._entry)
+
+    @property
+    def available(self) -> bool:
+        return _cash_amount(self._entry) is not None
+
+
 class WalletProfitSensor(WalletBaseSensor):
-    """Unrealized profit of the wallet: total value minus invested amount."""
+    """Unrealized profit of the wallet: total value minus invested amount.
+
+    When cash tracking is enabled the cash counts towards the profit:
+    profit = (valor total + free cash) − invested amount.
+    """
 
     _attr_icon = "mdi:chart-line"
 
@@ -435,9 +695,17 @@ class WalletProfitSensor(WalletBaseSensor):
         self._attr_translation_key = "wallet_profit"
 
     @property
+    def _total_with_cash(self) -> float | None:
+        total = self.coordinator.data.total
+        if total is None:
+            return None
+        cash = _cash_amount(self._entry)
+        return total + cash if cash is not None else total
+
+    @property
     def native_value(self) -> float | None:
         invested = _invested_amount(self._entry)
-        total = self.coordinator.data.total
+        total = self._total_with_cash
         if invested is None or total is None:
             return None
         return round(total - invested, 2)
@@ -454,12 +722,16 @@ class WalletProfitSensor(WalletBaseSensor):
     def extra_state_attributes(self) -> dict[str, Any]:
         return {
             ATTR_INVESTED: _invested_amount(self._entry),
-            ATTR_TOTAL: self.coordinator.data.total,
+            ATTR_TOTAL: self._total_with_cash,
+            ATTR_CASH: _cash_amount(self._entry),
         }
 
 
 class WalletProfitPctSensor(WalletBaseSensor):
-    """Unrealized profit of the wallet in percent of the invested amount."""
+    """Unrealized profit of the wallet in percent of the invested amount.
+
+    Includes the tracked free cash when enabled (same as the profit sensor).
+    """
 
     _attr_icon = "mdi:percent"
 
@@ -477,6 +749,9 @@ class WalletProfitPctSensor(WalletBaseSensor):
         total = self.coordinator.data.total
         if invested is None or total is None:
             return None
+        cash = _cash_amount(self._entry)
+        if cash is not None:
+            total += cash
         return round((total - invested) / invested * 100, 2)
 
     @property
@@ -492,4 +767,5 @@ class WalletProfitPctSensor(WalletBaseSensor):
         return {
             ATTR_INVESTED: _invested_amount(self._entry),
             ATTR_TOTAL: self.coordinator.data.total,
+            ATTR_CASH: _cash_amount(self._entry),
         }
